@@ -12,6 +12,7 @@ export function TextLinePanel({ layer }: { layer: TextLineLayer }) {
   const updateLayer = useLabel((s) => s.updateLayer)
   const up = (patch: Partial<TextLineLayer>) => updateLayer(layer.id, patch)
   const arched = Math.abs(layer.archMM) >= 0.05
+  const ring = (layer.ringMM ?? 0) > 0.1
 
   return (
     <>
@@ -95,6 +96,47 @@ export function TextLinePanel({ layer }: { layer: TextLineLayer }) {
             ]}
             onChange={(archMode) => up({ archMode })}
           />
+        )}
+      </div>
+      <div className="field-group">
+        <NumberField
+          label="Ring radius"
+          value={layer.ringMM ?? 0}
+          min={0}
+          max={40}
+          step={0.5}
+          unit="mm"
+          onChange={(ringMM) => up({ ringMM })}
+        />
+        {ring && (
+          <>
+            <NumberField
+              label="Anchor"
+              value={layer.ringAnchorDeg ?? 0}
+              min={-180}
+              max={180}
+              step={1}
+              unit="°"
+              onChange={(ringAnchorDeg) => up({ ringAnchorDeg })}
+            />
+            <Slider
+              label=""
+              value={layer.ringAnchorDeg ?? 0}
+              min={-180}
+              max={180}
+              step={1}
+              unit="°"
+              onChange={(ringAnchorDeg) => up({ ringAnchorDeg })}
+            />
+            <Toggle
+              label="Inside (bottom text)"
+              value={layer.ringInside ?? false}
+              onChange={(ringInside) => up({ ringInside })}
+            />
+            <p className="coming-soon">
+              Text wraps a circle centred at (X, Y) — for crests and seals. Overrides arch.
+            </p>
+          </>
         )}
       </div>
       <div className="field-group">

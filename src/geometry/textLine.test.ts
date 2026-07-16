@@ -147,3 +147,41 @@ describe('warnings', () => {
     expect(out.warnings.join(' ')).toMatch(/wider than/)
   })
 })
+
+describe('ring text', () => {
+  const distsFrom = (c: ReturnType<typeof compile>, cx: number, cy: number) => {
+    const d = (c.shapes[0] as { d: string }).d
+    return [...d.matchAll(/[ML] ([-\d.]+) ([-\d.]+)/g)].map((m) =>
+      Math.hypot(Number(m[1]) - cx, Number(m[2]) - cy),
+    )
+  }
+
+  it('places glyph outlines on a circle of radius ringMM around (xMM, yMM)', () => {
+    const out = compile({ text: 'SEAL', ringMM: 20, xMM: 5, yMM: -3, sizeMM: 4 })
+    expect(out.shapes).toHaveLength(1)
+    const dists = distsFrom(out, 5, -3)
+    // every outline point sits within an em of the 20 mm baseline ring
+    const onRing = dists.filter((r) => Math.abs(r - 20) <= 4.5).length
+    expect(onRing / dists.length).toBeGreaterThan(0.85)
+  })
+
+  it('top (outside) text sits above the centre; inside/bottom text sits below', () => {
+    const topY = (c: ReturnType<typeof compile>) => {
+      const d = (c.shapes[0] as { d: string }).d
+      return [...d.matchAll(/[ML] [-\d.]+ ([-\d.]+)/g)].map((m) => Number(m[1]))
+    }
+    const top = topY(compile({ text: 'TOP', ringMM: 15, xMM: 0, yMM: 0, ringAnchorDeg: 0 }))
+    expect(Math.max(...top)).toBeLessThan(-5) // above centre (−y)
+    const bot = topY(
+      compile({ text: 'BOT', ringMM: 15, xMM: 0, yMM: 0, ringAnchorDeg: 180, ringInside: true }),
+    )
+    expect(Math.min(...bot)).toBeGreaterThan(5) // below centre (+y)
+  })
+
+  it('ring overrides arch, and warns when the run outruns the circle', () => {
+    const out = compile({ text: 'A VERY LONG WORDMARK THAT WRAPS', ringMM: 3, sizeMM: 4, archMM: 6 })
+    expect(out.warnings.join(' ')).toMatch(/longer than the circle/)
+    // still ring-placed (near the 3 mm ring), not arched
+    expect(distsFrom(out, 0, 0).some((r) => r < 8)).toBe(true)
+  })
+})

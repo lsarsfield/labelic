@@ -1,6 +1,6 @@
 import type { Font } from 'opentype.js'
 import type { TextLineLayer } from '../model/types'
-import { RAD2DEG } from './angle'
+import { DEG2RAD, RAD2DEG } from './angle'
 import { flattenSegs } from './flatten'
 import { glyphPathD, opentypePathToSegs } from './glyphs'
 import { rotateThenTranslate, translation } from './mat2d'
@@ -77,6 +77,36 @@ export function compileTextLine(
     warnings.push(
       `Text strokes span under ~2 threads at this density — expect chunky or broken strokes below ≈ ${legibleMM.toFixed(1)} mm.`,
     )
+  }
+
+  // Ring text: glyphs placed around an explicit circle (crests, seals,
+  // roundels). Overrides the straight/arch baseline. The run is centred on
+  // `ringAnchorDeg`; outside text reads up at the top, inside text reads up
+  // at the bottom.
+  const ringR = layer.ringMM ?? 0
+  if (ringR > 0.1) {
+    const inside = layer.ringInside ?? false
+    const anchor = layer.ringAnchorDeg ?? 0
+    const parts: string[] = []
+    let cursor = 0
+    for (let i = 0; i < glyphs.length; i++) {
+      const u = cursor + advanceMM[i]! / 2 - totalMM / 2 // signed arc from run centre
+      const aDeg = inside ? anchor - (u / ringR) * RAD2DEG : anchor + (u / ringR) * RAD2DEG
+      const rad = aDeg * DEG2RAD
+      // polar: 0° at top, clockwise, y-down
+      const px = layer.xMM + ringR * Math.sin(rad)
+      const py = layer.yMM - ringR * Math.cos(rad)
+      const rotDeg = inside ? aDeg + 180 : aDeg
+      const path = glyphs[i]!.getPath(-advanceMM[i]! / 2, 0, layer.sizeMM)
+      const d = glyphPathD(path, rotateThenTranslate(rotDeg, px, py))
+      if (d.length > 0) parts.push(d)
+      cursor += advanceMM[i]! + gapMM[i]!
+    }
+    if (totalMM > 2 * Math.PI * ringR) {
+      warnings.push('Ring text is longer than the circle — glyphs will overlap; raise the radius.')
+    }
+    if (parts.length > 0) shapes.push({ kind: 'path', d: parts.join(' '), paint: fillPaint() })
+    return { shapes, warnings }
   }
 
   const sag = Math.abs(layer.archMM) < MIN_ARCH_MM ? 0 : layer.archMM

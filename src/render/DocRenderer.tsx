@@ -135,6 +135,11 @@ export interface BoundsMM {
 export function layerBoundsMM(layer: Layer, labelWidthMM: number, labelHeightMM: number): BoundsMM {
   switch (layer.type) {
     case 'textLine': {
+      const ringR = layer.ringMM ?? 0
+      if (ringR > 0.1) {
+        const r = ringR + layer.sizeMM * 1.1
+        return { x: layer.xMM - r, y: layer.yMM - r, w: r * 2, h: r * 2 }
+      }
       const font = getLoadedFont(layer.fontId)
       const w = font ? textLineWidthMM(layer, font) : layer.text.length * layer.sizeMM * 0.6
       const x0 =

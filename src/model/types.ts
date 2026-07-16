@@ -149,6 +149,16 @@ export interface TextLineLayer extends LayerBase {
   /** arc = upright glyphs rotated along the arc (default); warp = outlines genuinely bent. */
   archMode: 'arc' | 'warp'
   /**
+   * Ring text: > 0 places the run on a CIRCLE of this radius centred at
+   * (xMM, yMM), for crests / seals / roundels / union-bug wrap text.
+   * Overrides the straight/arch baseline. Optional (absent or 0 = off).
+   */
+  ringMM?: number
+  /** Ring: the angle the run centres on — 0 = top (12 o'clock), 180 = bottom, clockwise. */
+  ringAnchorDeg?: number
+  /** Ring: false = glyphs outside reading up (top text); true = inside reading up (bottom text). */
+  ringInside?: boolean
+  /**
    * > 0: a ground-woven clearance moat this wide around the glyphs — clears
    * hatch/pattern layers below so the text stays readable (the mask system).
    */
@@ -307,6 +317,9 @@ export function makeTextLineLayer(patch: Partial<TextLineLayer> = {}): TextLineL
     useKerning: true,
     archMM: 0,
     archMode: 'arc',
+    ringMM: 0,
+    ringAnchorDeg: 0,
+    ringInside: false,
     haloMM: 0,
     ...patch,
   }
