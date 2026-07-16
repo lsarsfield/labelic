@@ -1,5 +1,6 @@
 import { TEMPLATES } from '../../model/presets'
 import { LAYOUTS } from '../../model/layouts'
+import { EXAMPLES } from '../../model/examples'
 import { createFromDoc } from '../../io/workspace'
 
 /**
@@ -37,6 +38,20 @@ export function TemplatePicker({ onClose }: { onClose: () => void }) {
             <button key={l.id} type="button" className="template-card" onClick={() => open(l.make)}>
               <span className="template-name">{l.name}</span>
               <span className="template-blurb">{l.blurb}</span>
+            </button>
+          ))}
+        </div>
+
+        <div className="modal-section-title">Recreations</div>
+        <p className="modal-blurb">
+          Faithful interpretations of real vintage/heritage labels, built from the tool's own
+          primitives — a starting point to study or riff on.
+        </p>
+        <div className="template-cards">
+          {EXAMPLES.map((e) => (
+            <button key={e.id} type="button" className="template-card" onClick={() => open(e.make)}>
+              <span className="template-name">{e.name}</span>
+              <span className="template-blurb">{e.blurb}</span>
             </button>
           ))}
         </div>
