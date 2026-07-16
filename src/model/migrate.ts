@@ -26,6 +26,16 @@ export const migrations: Record<number, (doc: Record<string, unknown>) => Record
       return layer
     }),
   }),
+  // v3: hatch gains a frame-band mode (bandMM); default is inert unless the
+  // user picks area: 'border'.
+  3: (doc) => ({
+    ...doc,
+    layers: (Array.isArray(doc.layers) ? doc.layers : []).map((layer) =>
+      typeof layer === 'object' && layer !== null && (layer as { type?: string }).type === 'hatch'
+        ? { bandMM: 4, ...layer }
+        : layer,
+    ),
+  }),
 }
 
 export function migrateDoc(raw: Record<string, unknown>): Record<string, unknown> {

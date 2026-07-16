@@ -37,7 +37,7 @@ export type AssetId = string
 export type LayerId = string
 export type FontId = string
 
-export const DOC_VERSION = 2
+export const DOC_VERSION = 3
 
 /** SVG-valid stroke end styles. */
 export type SvgStrokeCap = 'butt' | 'round' | 'square'
@@ -182,9 +182,15 @@ export interface HatchLayer extends LayerBase {
   pitchMM: number
   strokeMM: number
   cap: StrokeCap
-  /** label = the whole face inset by insetMM; rect = the xMM/yMM/widthMM/heightMM band. */
-  area: 'label' | 'rect'
+  /**
+   * label = the whole face inset by insetMM; border = a hatched frame band
+   * (insetMM in, bandMM thick) with the centre left clear; rect = the
+   * xMM/yMM/widthMM/heightMM band you place.
+   */
+  area: 'label' | 'border' | 'rect'
   insetMM: number
+  /** border mode: thickness of the hatched frame ring. */
+  bandMM: number
   /** rect mode: region centre + size. */
   xMM: number
   yMM: number
@@ -338,6 +344,7 @@ export function makeHatchLayer(patch: Partial<HatchLayer> = {}): HatchLayer {
     cap: 'butt',
     area: 'label',
     insetMM: 1.5,
+    bandMM: 4,
     xMM: 0,
     yMM: 0,
     widthMM: 20,

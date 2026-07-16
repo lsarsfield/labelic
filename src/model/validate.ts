@@ -36,7 +36,7 @@ const REQUIRED: Record<LayerType, Record<string, 'n' | 's' | 'b'>> = {
   },
   hatch: {
     angleDeg: 'n', pitchMM: 'n', strokeMM: 'n', cap: 's', area: 's', insetMM: 'n',
-    xMM: 'n', yMM: 'n', widthMM: 'n', heightMM: 'n',
+    bandMM: 'n', xMM: 'n', yMM: 'n', widthMM: 'n', heightMM: 'n',
   },
   border: {
     pattern: 's', insetMM: 'n', strokeMM: 'n', unitMM: 'n', sides: 's',
@@ -74,7 +74,7 @@ function checkLayer(value: unknown, index: number): string | null {
   if (type === 'border' && !BORDER_PATTERNS.includes(value.pattern as string)) {
     return `layer ${index} ("${value.name}") has an unknown border pattern`
   }
-  if (type === 'hatch' && value.area !== 'label' && value.area !== 'rect') {
+  if (type === 'hatch' && value.area !== 'label' && value.area !== 'border' && value.area !== 'rect') {
     return `layer ${index} ("${value.name}") has an unknown hatch area`
   }
   if ((type === 'motif' || type === 'repeatRow') && !checkMotifSource(value.source)) {

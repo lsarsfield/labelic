@@ -45,14 +45,16 @@ export function HatchPanel({ layer }: { layer: HatchLayer }) {
       <div className="field-group">
         <SegmentedControl
           label="Area"
+          stack
           value={layer.area}
           options={[
-            { value: 'label', label: 'Whole label' },
+            { value: 'label', label: 'Fill' },
+            { value: 'border', label: 'Frame' },
             { value: 'rect', label: 'Band' },
           ]}
           onChange={(area) => up({ area })}
         />
-        {layer.area === 'label' ? (
+        {layer.area !== 'rect' && (
           <NumberField
             label="Inset"
             value={layer.insetMM}
@@ -62,7 +64,19 @@ export function HatchPanel({ layer }: { layer: HatchLayer }) {
             unit="mm"
             onChange={(insetMM) => up({ insetMM })}
           />
-        ) : (
+        )}
+        {layer.area === 'border' && (
+          <NumberField
+            label="Band"
+            value={layer.bandMM}
+            min={0.5}
+            max={20}
+            step={0.1}
+            unit="mm"
+            onChange={(bandMM) => up({ bandMM })}
+          />
+        )}
+        {layer.area === 'rect' && (
           <>
             <NumberField label="X" value={layer.xMM} min={-60} max={60} step={0.1} unit="mm" onChange={(xMM) => up({ xMM })} />
             <NumberField label="Y" value={layer.yMM} min={-40} max={40} step={0.1} unit="mm" onChange={(yMM) => up({ yMM })} />

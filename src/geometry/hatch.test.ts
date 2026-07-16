@@ -65,6 +65,41 @@ describe('compileHatch', () => {
     }
   })
 
+  it('border mode leaves the inner rect clear (a hatched frame)', () => {
+    // 0° vertical stripes over a frame: insetMM 1, band 3 → inner hole is the
+    // rect [-24,24]×[-10,10] shrunk by 3 = [-21,21]×[-7,7]. A stripe passing
+    // through the hole splits into a top piece and a bottom piece.
+    const { segs } = stripes(
+      makeHatchLayer({ area: 'border', angleDeg: 0, pitchMM: 2, insetMM: 1, bandMM: 3 }),
+    )
+    // find a stripe near x=0 (well inside the hole horizontally)
+    const central = segs.filter(([x]) => Math.abs(x) < 20)
+    expect(central.length).toBeGreaterThan(0)
+    // each such stripe must be split: no segment crosses the hole interior
+    for (const [, y1, , y2] of central) {
+      const lo = Math.min(y1, y2)
+      const hi = Math.max(y1, y2)
+      // a piece is either entirely above the hole (hi ≤ -7) or below (lo ≥ 7)
+      expect(hi <= -7 + 1e-6 || lo >= 7 - 1e-6).toBe(true)
+    }
+    // and both a top piece and a bottom piece exist for a central stripe
+    const oneX = central[0]![0]
+    const atX = central.filter(([x]) => Math.abs(x - oneX) < 1e-6)
+    expect(atX.length).toBe(2)
+  })
+
+  it('a frame band wide enough to fill the middle degrades to a solid fill', () => {
+    const { segs } = stripes(
+      makeHatchLayer({ area: 'border', angleDeg: 0, pitchMM: 2, insetMM: 1, bandMM: 20 }),
+    )
+    // no hole: a central stripe is one unbroken piece spanning the height
+    const central = segs.filter(([x]) => Math.abs(x) < 5)
+    for (const [, y1, , y2] of central) {
+      expect(Math.min(y1, y2)).toBeCloseTo(-10, 6)
+      expect(Math.max(y1, y2)).toBeCloseTo(10, 6)
+    }
+  })
+
   it('carries the layer cap into the paint', () => {
     const out = compileHatch(makeHatchLayer({ cap: 'square' }), W, H)
     const shape = out.shapes[0]!
