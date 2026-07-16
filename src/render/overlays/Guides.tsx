@@ -13,6 +13,8 @@ const SAFE_INSET_MM = 1.5
  */
 export function Guides() {
   const showGuides = useLabel((s) => s.view.showGuides)
+  // the folded presentation crops the blank — full-blank guides would lie
+  const folded = useLabel((s) => s.view.mode === 'woven' && s.view.folded)
   const widthMM = useLabel((s) => s.doc.widthMM)
   const heightMM = useLabel((s) => s.doc.heightMM)
   const fold = useLabel((s) => s.doc.fold)
@@ -25,6 +27,7 @@ export function Guides() {
   const folds = foldLinesMM(fold, widthMM, heightMM)
   const selBounds = selected ? layerBoundsMM(selected, widthMM, heightMM) : null
 
+  if (folded) return null
   return (
     <g pointerEvents="none">
       {showGuides && (

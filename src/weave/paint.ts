@@ -1,6 +1,7 @@
 import type { LabelDoc } from '../model/types'
 import { loomProfile } from '../model/types'
 import { DEG2RAD } from '../geometry/angle'
+import { visiblePanelMM } from '../geometry/folds'
 import { rgbToCss, shade, shadeCss } from './color'
 import type { WeaveGrid } from './grid'
 import { hash2 } from './grid'
@@ -171,6 +172,144 @@ export function paintWeave(
   paintEnds(ctx, doc, { left, top, labelW, labelH, cellW, cellH })
 
   ctx.restore()
+}
+
+/**
+ * Folded presentation: the flat weave rendered offscreen, then the finished
+ * visible panel composited at its true position with a drop shadow and
+ * fold-roll shading. Fabric is cropped at fold lines — the folded-under
+ * material is behind the panel, and the roll gradient at a folded edge is
+ * what reads as cloth turning over.
+ */
+export function paintFoldedWeave(
+  ctx: CanvasRenderingContext2D,
+  grid: WeaveGrid,
+  doc: LabelDoc,
+  opts: PaintOpts,
+): void {
+  const cellW = grid.cellWMM * opts.pxPerMM
+  const cellH = grid.cellHMM * opts.pxPerMM
+  const labelW = grid.cols * cellW
+  const labelH = grid.rows * cellH
+
+  // 1 — flat weave, offscreen
+  const off = document.createElement('canvas')
+  off.width = Math.max(1, Math.ceil(labelW))
+  off.height = Math.max(1, Math.ceil(labelH))
+  const offCtx = off.getContext('2d')
+  if (!offCtx) return
+  paintWeave(offCtx, grid, doc, {
+    pxPerMM: opts.pxPerMM,
+    originX: off.width / 2,
+    originY: off.height / 2,
+    lightDeg: opts.lightDeg,
+  })
+
+  // 2 — the visible panel, at its true position
+  const panel = visiblePanelMM(doc.fold, doc.widthMM, doc.heightMM)
+  const px = (mm: number) => mm * opts.pxPerMM
+  const labelLeft = opts.originX - labelW / 2
+  const labelTop = opts.originY - labelH / 2
+  const dst = {
+    x: labelLeft + px(panel.x + doc.widthMM / 2),
+    y: labelTop + px(panel.y + doc.heightMM / 2),
+    w: px(panel.w),
+    h: px(panel.h),
+  }
+  const src = {
+    x: px(panel.x + doc.widthMM / 2),
+    y: px(panel.y + doc.heightMM / 2),
+    w: px(panel.w),
+    h: px(panel.h),
+  }
+
+  // drop shadow cast by the fabric onto the page, offset away from the light
+  const rad = opts.lightDeg * DEG2RAD
+  ctx.save()
+  ctx.shadowColor = 'rgba(0, 0, 0, 0.5)'
+  ctx.shadowBlur = px(1.6)
+  ctx.shadowOffsetX = -Math.sin(rad) * px(0.7)
+  ctx.shadowOffsetY = Math.cos(rad) * px(0.7)
+  ctx.fillStyle = doc.weave.warp.hex
+  ctx.fillRect(dst.x, dst.y, dst.w, dst.h)
+  ctx.restore()
+
+  ctx.drawImage(off, src.x, src.y, src.w, src.h, dst.x, dst.y, dst.w, dst.h)
+
+  // 3 — fold rolls: a bright turn line fading into shade, along each folded edge
+  const roll = (
+    x0: number,
+    y0: number,
+    x1: number,
+    y1: number,
+    inward: { x: number; y: number },
+  ) => {
+    const depth = px(1.4)
+    const grad = ctx.createLinearGradient(x0, y0, x0 + inward.x * depth, y0 + inward.y * depth)
+    grad.addColorStop(0, 'rgba(255,255,255,0.22)')
+    grad.addColorStop(0.25, 'rgba(0,0,0,0.28)')
+    grad.addColorStop(1, 'rgba(0,0,0,0)')
+    ctx.fillStyle = grad
+    const w = inward.x !== 0 ? depth : x1 - x0
+    const h = inward.y !== 0 ? depth : y1 - y0
+    ctx.fillRect(inward.x < 0 ? x0 - depth : x0, inward.y < 0 ? y0 - depth : y0, w, h)
+  }
+
+  switch (doc.fold) {
+    case 'endFold':
+      roll(dst.x, dst.y, dst.x, dst.y + dst.h, { x: 1, y: 0 })
+      roll(dst.x + dst.w, dst.y, dst.x + dst.w, dst.y + dst.h, { x: -1, y: 0 })
+      break
+    case 'loopFold':
+      // the loop's turn is the panel's bottom edge
+      roll(dst.x, dst.y + dst.h, dst.x + dst.w, dst.y + dst.h, { x: 0, y: -1 })
+      break
+    case 'centreFold':
+      // book spine on the left
+      roll(dst.x, dst.y, dst.x, dst.y + dst.h, { x: 1, y: 0 })
+      break
+    case 'mitreFold': {
+      // 45° tabs folded behind the bottom corners: diagonal crease shadows
+      const m = px(Math.min(3, doc.widthMM / 4, doc.heightMM))
+      for (const side of [0, 1] as const) {
+        const cx = side === 0 ? dst.x : dst.x + dst.w
+        const dir = side === 0 ? 1 : -1
+        const grad = ctx.createLinearGradient(cx + (dir * m) / 2, dst.y + dst.h - m / 2, cx, dst.y + dst.h)
+        grad.addColorStop(0, 'rgba(0,0,0,0)')
+        grad.addColorStop(1, 'rgba(0,0,0,0.35)')
+        ctx.fillStyle = grad
+        ctx.beginPath()
+        ctx.moveTo(cx, dst.y + dst.h - m)
+        ctx.lineTo(cx + dir * m, dst.y + dst.h)
+        ctx.lineTo(cx, dst.y + dst.h)
+        ctx.closePath()
+        ctx.fill()
+        ctx.strokeStyle = 'rgba(255,255,255,0.14)'
+        ctx.lineWidth = 1
+        ctx.beginPath()
+        ctx.moveTo(cx, dst.y + dst.h - m)
+        ctx.lineTo(cx + dir * m, dst.y + dst.h)
+        ctx.stroke()
+      }
+      break
+    }
+    case 'straight':
+      break
+  }
+
+  // 4 — a whisper of curl: corners lift slightly away from the page
+  const curl = ctx.createRadialGradient(
+    dst.x + dst.w / 2,
+    dst.y + dst.h / 2,
+    Math.min(dst.w, dst.h) * 0.35,
+    dst.x + dst.w / 2,
+    dst.y + dst.h / 2,
+    Math.hypot(dst.w, dst.h) / 2,
+  )
+  curl.addColorStop(0, 'rgba(0,0,0,0)')
+  curl.addColorStop(1, 'rgba(0,0,0,0.10)')
+  ctx.fillStyle = curl
+  ctx.fillRect(dst.x, dst.y, dst.w, dst.h)
 }
 
 /** Horizontal capsule from x0 to x1, centred on cy, height h. */

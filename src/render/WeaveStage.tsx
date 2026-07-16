@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { useLabel } from '../state/store'
 import { useViewport } from '../state/viewport'
-import { paintWeave } from '../weave/paint'
+import { paintFoldedWeave, paintWeave } from '../weave/paint'
 import { sampleDoc } from '../weave/sample'
 
 /**
@@ -20,6 +20,7 @@ export function WeaveStage() {
   const assetsRevision = useLabel((s) => s.assetsRevision)
   const fontsRevision = useLabel((s) => s.fontsRevision)
   const lightDeg = useLabel((s) => s.view.lightDeg)
+  const folded = useLabel((s) => s.view.folded)
   const { scale, tx, ty, size } = useViewport()
 
   useEffect(() => {
@@ -38,18 +39,20 @@ export function WeaveStage() {
       ctx.clearRect(0, 0, W, H)
       const { grid, sampleMs } = sampleDoc(doc, { assetsRevision, fontsRevision })
       const t0 = performance.now()
-      paintWeave(ctx, grid, doc, {
+      const paintOpts = {
         pxPerMM: scale * dpr,
         originX: tx * dpr,
         originY: ty * dpr,
         lightDeg,
-      })
+      }
+      if (folded) paintFoldedWeave(ctx, grid, doc, paintOpts)
+      else paintWeave(ctx, grid, doc, paintOpts)
       lastWeaveTimings.sampleMs = sampleMs
       lastWeaveTimings.paintMs = performance.now() - t0
       lastWeaveTimings.cells = grid.cols * grid.rows
     })
     return () => cancelAnimationFrame(raf.current)
-  }, [doc, assetsRevision, fontsRevision, lightDeg, scale, tx, ty, size])
+  }, [doc, assetsRevision, fontsRevision, lightDeg, folded, scale, tx, ty, size])
 
   return <canvas ref={canvasRef} className="weave-stage" style={{ width: size.w || '100%', height: size.h || '100%' }} />
 }
