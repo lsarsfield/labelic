@@ -5,6 +5,8 @@ import './theme.css'
 import { redo, undo, useLabel } from './state/store'
 import { useViewport } from './state/viewport'
 import { exportArtworkSvg, extractEmbeddedProject } from './io/exportSvg'
+import { exportDraftPng } from './io/exportDraftPng'
+import { exportWovenPng } from './io/exportWovenPng'
 import { loadProjectFile } from './io/project'
 import * as workspace from './io/workspace'
 import { presetBlank, TEMPLATES } from './model/presets'
@@ -22,6 +24,8 @@ if (import.meta.env.DEV) {
       undo,
       redo,
       exportArtworkSvg,
+      exportWovenPng,
+      exportDraftPng,
       extractEmbeddedProject,
       parseDoc,
       loadProjectFile,

@@ -1,15 +1,46 @@
 import { useMemo, useRef, useState } from 'react'
 import { DEFAULT_SVG_OPTIONS, exportArtworkSvg, type SvgExportOptions } from '../../io/exportSvg'
-import { downloadText, safeFilename } from '../../io/download'
+import { exportDraftPng } from '../../io/exportDraftPng'
+import { exportWovenPng } from '../../io/exportWovenPng'
+import { downloadBlob, downloadText, safeFilename } from '../../io/download'
 import { loadProjectFile, saveProject } from '../../io/project'
 import { useLabel } from '../../state/store'
+import { Select } from '../controls/Select'
 import { Toggle } from '../controls/Toggle'
 
 export function ExportDialog({ onClose }: { onClose: () => void }) {
   const doc = useLabel((s) => s.doc)
+  const lightDeg = useLabel((s) => s.view.lightDeg)
   const [svgOptions, setSvgOptions] = useState<SvgExportOptions>(DEFAULT_SVG_OPTIONS)
+  const [pngPx, setPngPx] = useState('2048')
+  const [pngFolded, setPngFolded] = useState(false)
+  const [pngError, setPngError] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
+
+  const downloadWoven = async () => {
+    setPngError(null)
+    setBusy(true)
+    try {
+      const blob = await exportWovenPng(doc, { px: Number(pngPx), lightDeg, folded: pngFolded })
+      downloadBlob(blob, `${safeFilename(doc.name)}-woven-${pngPx}px.png`)
+    } catch (e) {
+      setPngError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const downloadDraft = async () => {
+    setPngError(null)
+    try {
+      const blob = await exportDraftPng(doc)
+      downloadBlob(blob, `${safeFilename(doc.name)}-draft.png`)
+    } catch (e) {
+      setPngError(e instanceof Error ? e.message : String(e))
+    }
+  }
 
   // Live warnings: run the artwork export whenever options change.
   const { warnings } = useMemo(() => exportArtworkSvg(doc, svgOptions), [doc, svgOptions])
@@ -70,7 +101,26 @@ export function ExportDialog({ onClose }: { onClose: () => void }) {
 
         <div className="modal-section">
           <div className="modal-section-title">Woven mockup · PNG</div>
-          <div className="readout">The thread-level weave render lands with the weave preview milestone.</div>
+          <Select
+            label="Size"
+            value={pngPx}
+            options={[
+              { value: '1024', label: '1024 px' },
+              { value: '2048', label: '2048 px' },
+              { value: '4096', label: '4096 px' },
+            ]}
+            onChange={setPngPx}
+          />
+          <Toggle label={`Folded (${doc.fold})`} value={pngFolded} onChange={setPngFolded} />
+          {pngError && <div className="warning-note">{pngError}</div>}
+          <div className="modal-row">
+            <button type="button" className="button-primary" disabled={busy} onClick={() => void downloadWoven()}>
+              {busy ? 'Weaving…' : 'Download woven PNG'}
+            </button>
+            <button type="button" onClick={() => void downloadDraft()} title="The grid itself, one pixel per thread — the punchcard">
+              Weave draft PNG
+            </button>
+          </div>
         </div>
 
         <div className="modal-section">
