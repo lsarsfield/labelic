@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { ThreadColor } from '../../model/types'
-import { maxWeftsFor, THREAD_CANON } from '../../model/types'
+import { maxWeftsFor, PALETTE_PRESETS, THREAD_CANON } from '../../model/types'
 import { useLabel } from '../../state/store'
 
 /**
@@ -18,6 +18,7 @@ export function PaletteEditor() {
   const addWeft = useLabel((s) => s.addWeft)
   const updateWeft = useLabel((s) => s.updateWeft)
   const removeWeft = useLabel((s) => s.removeWeft)
+  const applyPalette = useLabel((s) => s.applyPalette)
   const [editing, setEditing] = useState<number | 'warp' | null>(null)
 
   const cap = maxWeftsFor(weave.loom)
@@ -39,6 +40,25 @@ export function PaletteEditor() {
 
   return (
     <div className="palette">
+      <div className="field field-stack">
+        <span className="field-label">Palette preset</span>
+        <select
+          value=""
+          onChange={(e) => {
+            const p = PALETTE_PRESETS.find((x) => x.name === e.target.value)
+            if (p) applyPalette(p.warp, p.wefts)
+          }}
+        >
+          <option value="" disabled>
+            — load a vintage palette —
+          </option>
+          {PALETTE_PRESETS.map((p) => (
+            <option key={p.name} value={p.name}>
+              {p.name}
+            </option>
+          ))}
+        </select>
+      </div>
       <div className="field field-stack">
         <span className="field-label">Warp (ground)</span>
         <span className="thread-row">

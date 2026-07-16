@@ -33,6 +33,12 @@ export const THREAD_CANON: readonly ThreadColor[] = [
   { name: 'Silver', hex: '#B9B7AF' },
   { name: 'Rose', hex: '#C77E8E' },
   { name: 'Rust', hex: '#A2573B' },
+  // workwear / military / French / repro grounds (from the vintage-label study)
+  { name: 'Olive', hex: '#4C4A32' },
+  { name: 'Ecru', hex: '#DBCDA6' },
+  { name: 'Tan', hex: '#B49A70' },
+  { name: 'Indigo', hex: '#34456B' },
+  { name: 'Sun-faded', hex: '#C7B79C' },
 ]
 
 /** Canon lookup by name — presets and defaults reference threads this way. */
@@ -41,6 +47,32 @@ export function thread(name: string): ThreadColor {
   if (!t) throw new Error(`unknown canon thread "${name}"`)
   return { ...t }
 }
+
+/** A named historical warp+weft combination, from real vintage labels. */
+export interface PalettePreset {
+  name: string
+  warp: ThreadColor
+  wefts: ThreadColor[]
+}
+
+/**
+ * One-click palettes drawn from genuine labels (see VINTAGE-RESEARCH-ROADMAP.md).
+ * All are ≤3 wefts, so they load onto either loom without exceeding the cap.
+ */
+export const PALETTE_PRESETS: readonly PalettePreset[] = [
+  { name: 'Red Tab', warp: thread('Crimson'), wefts: [thread('White')] },
+  { name: 'Union black', warp: thread('Black'), wefts: [thread('White')] },
+  { name: 'Blue Bell', warp: thread('Ivory'), wefts: [thread('Navy'), thread('Crimson')] },
+  { name: 'Master Cloth', warp: thread('Ivory'), wefts: [thread('Crimson')] },
+  { name: 'Dickies oval', warp: thread('Black'), wefts: [thread('Gold'), thread('Rust')] },
+  { name: 'Vestbak', warp: thread('Ecru'), wefts: [thread('Forest'), thread('Crimson')] },
+  { name: 'Ben Davis', warp: thread('Crimson'), wefts: [thread('Ivory')] },
+  { name: 'Pointer', warp: thread('Ecru'), wefts: [thread('Crimson'), thread('Brown')] },
+  { name: 'Patriotic', warp: thread('White'), wefts: [thread('Crimson'), thread('Navy')] },
+  { name: 'Pendleton', warp: thread('Navy'), wefts: [thread('Gold')] },
+  { name: 'French work', warp: thread('Indigo'), wefts: [thread('White'), thread('Crimson')] },
+  { name: 'Mil-spec', warp: thread('White'), wefts: [thread('Black')] },
+]
 
 export interface LoomProfile {
   /** Design cells per mm, horizontal (warp ends) and vertical (weft picks). */

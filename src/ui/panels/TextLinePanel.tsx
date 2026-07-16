@@ -1,4 +1,5 @@
 import type { TextLineLayer } from '../../model/types'
+import { COPY_LIBRARY } from '../../model/copyLibrary'
 import { useLabel } from '../../state/store'
 import { FontPicker } from '../controls/FontPicker'
 import { NumberField } from '../controls/NumberField'
@@ -16,6 +17,28 @@ export function TextLinePanel({ layer }: { layer: TextLineLayer }) {
     <>
       <div className="field-group">
         <TextField label="Text" value={layer.text} onChange={(text) => up({ text })} maxLength={64} />
+        <label className="field field-stack">
+          <span className="field-label">Insert copy</span>
+          <select
+            value=""
+            onChange={(e) => {
+              if (e.target.value) up({ text: e.target.value })
+            }}
+          >
+            <option value="" disabled>
+              — standard vintage copy —
+            </option>
+            {COPY_LIBRARY.map((g) => (
+              <optgroup key={g.label} label={g.label}>
+                {g.items.map((it) => (
+                  <option key={it} value={it}>
+                    {it}
+                  </option>
+                ))}
+              </optgroup>
+            ))}
+          </select>
+        </label>
         <FontPicker value={layer.fontId} onChange={(fontId) => up({ fontId })} />
         <NumberField
           label="Size"

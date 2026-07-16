@@ -11,6 +11,7 @@ import { loadProjectFile } from './io/project'
 import { uploadSvg } from './io/svgAssets'
 import * as workspace from './io/workspace'
 import { presetBlank, TEMPLATES } from './model/presets'
+import { LAYOUTS } from './model/layouts'
 import { parseDoc } from './model/serialize'
 import { lastWeaveTimings } from './render/WeaveStage'
 import { gridChecksum } from './weave/grid'
@@ -34,6 +35,7 @@ if (import.meta.env.DEV) {
       workspace,
       presets: { presetBlank },
       templates: TEMPLATES,
+      layouts: LAYOUTS,
       debug: {
         sampleDoc,
         gridChecksum,

@@ -21,6 +21,7 @@ export type {
   GroundWeave,
   LoomProfile,
   LoomType,
+  PalettePreset,
   ThreadColor,
 } from './loom'
 export {
@@ -29,6 +30,7 @@ export {
   LOOM_TABLE,
   loomProfile,
   maxWeftsFor,
+  PALETTE_PRESETS,
   THREAD_CANON,
   thread,
 } from './loom'

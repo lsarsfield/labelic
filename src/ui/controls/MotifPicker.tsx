@@ -11,6 +11,7 @@ export interface MotifPickerProps {
 const GROUP_ORDER = [
   'Label',
   'Basic',
+  'Heritage',
   'Celestial',
   'Floral',
   'Bandana',

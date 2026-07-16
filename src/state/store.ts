@@ -50,6 +50,8 @@ export interface LabelState {
    * back to thread 0 (the ground sentinel is untouched).
    */
   removeWeft: (index: number) => void
+  /** Replace warp + weft palette wholesale (a named preset); clamps layer weftIndex. */
+  applyPalette: (warp: ThreadColor, wefts: ThreadColor[]) => void
   addLayer: (type: LayerType) => void
   removeLayer: (id: LayerId) => void
   duplicateLayer: (id: LayerId) => void
@@ -117,6 +119,18 @@ export const useLabel = create<LabelState>()(
             if (layer.weftIndex === GROUND_WEFT_INDEX) continue
             if (layer.weftIndex === index) layer.weftIndex = 0
             else if (layer.weftIndex > index) layer.weftIndex -= 1
+          }
+        }),
+
+      applyPalette: (warp, wefts) =>
+        set((s) => {
+          if (wefts.length === 0) return
+          s.doc.weave.warp = { ...warp }
+          s.doc.weave.wefts = wefts.map((w) => ({ ...w }))
+          const maxIndex = wefts.length - 1
+          for (const layer of s.doc.layers) {
+            if (layer.weftIndex === GROUND_WEFT_INDEX) continue
+            if (layer.weftIndex > maxIndex) layer.weftIndex = maxIndex
           }
         }),
 
