@@ -1,6 +1,6 @@
 # Motif credits
 
-Some built-in motifs are adopted from open-licensed sources and normalized into Buttonic's
+Some built-in motifs are adopted from open-licensed sources and normalized into the shared Buttonic/Labelic
 unit-box motif convention (single colour, holes via winding). Geometric/parametric motifs are
 original.
 
@@ -22,3 +22,9 @@ original.
 ## Wikimedia Commons — CC0 / public domain (no attribution required; credited by courtesy)
 - `wreath` — "Greek Roman Laurel wreath vector" — CC0
 - `paisley` — "Simple paisley" by Aliraeisdanaei — CC0
+
+## Labelic additions
+
+The `Label` motif group (block, banner, cartouche, union bug, spool, needle,
+buttonhole, weaving shuttle, and the care-symbol set) is original geometric work,
+authored directly as unit-box path data for weave-scale legibility.

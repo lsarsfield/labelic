@@ -1,168 +1,160 @@
-# Buttonic — project context for Claude
+# Labelic — project context for Claude
 
-Parametric radial engraving designer for die-stamped jean buttons. Everything is computed
-from the centre axis outward — counts, radii, angles — never manual duplicate-and-rotate.
+Designer for vintage woven garment labels. A woven label is a bitmap made of threads:
+the design rasterizes onto the loom's grid (warp ends across, weft picks down) and each
+cell is woven in exactly one weft thread from the doc palette. Chunky stair-stepped
+type IS the aesthetic. Sibling of Buttonic (same chassis: state/undo, workspace, fonts,
+Shape IR, export spine); cartesian where Buttonic is radial, cloth where it is metal.
 
-- **Live:** https://buttonic.app (GitHub Pages; apex A records → 185.199.108–111.153;
-  DNS at DreamHost). Old github.io/buttonic URL 301s here. The earlier
-  buttonic.liet.co (Cargo DNS) is retired and no longer served.
-- **Repo:** https://github.com/lsarsfield/buttonic (public; `gh` is authed as `lsarsfield` —
-  Liam also owns a separate `LiamSarsfield` account, unused here).
-- **Stack:** React 19 + TS strict + Vite 6 + vitest 3 (Node 18.20.8 locally — do NOT bump
-  vite to 7). Runtime deps are deliberately minimal (zustand+zundo+immer, opentype.js,
-  svg-pathdata, polygon-clipping). Justify any addition.
+- **Repo:** local only so far (`~/Claude/Projects/Labelic`); GitHub repo + Pages deploy
+  pending Liam's approval. Buttonic precedent: `lsarsfield/<name>`, CI gates deploy on
+  typecheck + tests, base `./`.
+- **Stack:** React 19 + TS strict + Vite 6 + vitest 3 (Node 18.20.8 locally — do NOT
+  bump vite to 7). Runtime deps deliberately minimal (zustand+zundo+immer, opentype.js,
+  svg-pathdata). polygon-clipping was dropped in the carve — weave overlap is per-cell
+  claim priority, artwork overlap is paint order. Justify any addition.
 
 ## Commands
 
 `npm run dev` (preview via .claude/launch.json "dev", port 5173) · `npm test` ·
-`npm run typecheck` · `npm run build`. Dev builds expose `window.__engraver`
-(stores, presets, exportSvg/exportPng, workspace, loadProjectFile) for scripted
-browser verification.
-
-Deploy = push to main → CI (typecheck + tests gate the deploy, base `./`).
-**Pages flake:** "Deployment failed, try again later" with a green build is GitHub being
-GitHub — `gh run rerun <id> --failed`; if it persists, dispatch fresh:
-`gh workflow run deploy.yml`. (`error_count: 10` in deploy-pages logs is an input
-param, not an error.)
+`npm run typecheck` · `npm run build`. Dev builds expose `window.__labelic`
+(useLabel/useViewport stores, undo/redo, exportArtworkSvg/exportWovenPng/exportDraftPng,
+extractEmbeddedProject, parseDoc, loadProjectFile, workspace, presets, templates, and
+`debug: { sampleDoc, gridChecksum, weaveTimings }`) for scripted browser verification.
 
 ## Architecture map
 
-- `src/model/` — doc schema (`types.ts`, DOC_VERSION **8**), sequential `migrate.ts`
-  (v2 localFonts, v3 ring-text symmetry, v4 boolean roles/halos, v5 partial-arc hatch
-  `sweepDeg`/`repeats`, v6 stroke `cap`/`join`, v7 pointed-hatch `capPointMM`/`pointEnds`,
-  v8 centre `motifId` (built-in motif as a third centre source, inert unless
-  `sourceType: 'builtin'`) — copy this pattern; defaults spread FIRST so stored values win),
-  hand-rolled
-  `validate.ts` (REQUIRED field tables), `presets.ts` (Reference A/B + Flower-Power +
-  Old-Book templates; **preset literals must carry every schema field** — the round-trip
-  test compares them through parseDoc. New presets add NEW snapshots; existing goldens
-  must stay byte-identical, so new schema fields default to the old behaviour).
-- `src/geometry/` — the pure kernel (NO DOM/React/IO imports; node-tested):
-  - `shapes.ts` Shape IR: `circle | line | path | instanced(def + N transforms)`.
-    Exact-first: circles stay circles, motifs/glyphs stay beziers under affine;
-    polylines ONLY for warped/boolean output (L-only, via `format.fmt`).
-  - `compile.ts` per-layer compilers, WeakMap-memoized on layer identity +
-    `compileCtxKey` (immer preserves identity of untouched layers).
-  - `warp.ts` flatten-then-warp with adaptive subdivision IN WARPED SPACE (never warp
-    bezier control points — the polar map isn't affine). `flatten.ts`, `pathData.ts`
-    (single svg-pathdata wrapper), `mat2d.ts` (no DOMMatrix).
-  - `clip.ts` cross-layer subtraction: clearance discs (v1, def-level fast path for
-    hatch — keep) + polygon regions (v2). Regions-empty path returns the SAME objects.
-    POINTED hatch ticks (filled convex spindles) subtract halos EXACTLY — the cut is
-    precisely the halo, nothing more (Liam's spec): `convexDifference` walks the tick
-    boundary against the region rings (ring chains inside the tick + boundary arcs
-    outside the regions, stitched at shared crossings). Oblique letter edges cut
-    obliquely, corner grazes shave only the corner, partial-width overlaps leave the
-    rest standing, counters survive. Degenerate configurations (tangency,
-    vertex-on-edge, overlapping contributor regions) fail validation and fall back to
-    the conservative SWATH cut (`swathClearSpans`: union of per-edge Cyrus–Beck axial
-    shadows on the tick axis; gap midpoints classify interior-only coverage). STROKED
-    ticks keep tool-pass semantics — a stroke physically cannot end obliquely — and
-    stop where their FULL width first touches a region. Centreline-only clipping was
-    wrong by strokeMM/2 and missed corner grazes — don't regress to it. NEVER
-    martinez-difference ticks against a halo (hangs tens of seconds, mangles edges).
-    Real motifs (curved/multi-loop/non-convex) still use `safeDifference`; warped
-    multi-segment strokes still clip by centreline (known limit).
-  - `motifs/builtins.ts` — ~128 built-in motifs grouped Basic/Celestial/Floral/Bandana/
-    Kilim/Groovy/Workwear/Tarot/Old Book (`{id,label,d,paintType,group?}`, unit-box y-down).
-    Selection is grounded in the traditional canon per category (kilim = authentic Anatolian:
-    elibelinde/scorpion/comb/muska/ram's-horn; tarot = the four suits + Major-Arcana emblems;
-    Old Book = real typographic ornaments: hedera/pilcrow/dagger/asterism/dinkus). LESSON from
-    a prune-then-rebuild: intricate hand-drawn FIGURATIVE silhouettes read as mush at ~36px, so
-    the figurative motifs are now ADOPTED from open-licensed icon libraries — normalized into
-    the unit box by `scratchpad/find-refs.mjs`+`normalize-files.mjs` (game-icons.net CC BY,
-    Wikimedia CC0), attributed in `CREDITS.md`; geometric/parametric motifs stay original.
-    game-icons author for nonzero winding, so holes adopt as-is (no evenodd fixups needed). Referenced by string `motifId` (repeat bands + ring-text dividers + centre, never
-    stored inline), so adding one is a single-file edit — no schema change. Holes via
-    reversed-winding under nonzero (instanced defs have no evenodd). Many were authored by
-    `scratchpad`-style generators (parametric polygons/stars/suns/rings via a `pt`/`circle`/
-    `polarClosed`/`starPoly` toolkit; figurative ones hand-beziered). Rendered as swatches
-    by `ui/controls/MotifPicker`, which is a SEARCH + collapsible-accordion + capped-scroll
-    picker (the flat grid would swamp the ~272px inspector at this count; the group holding
-    the current value auto-expands).
-  - `poly.ts` polygon-clipping bridge: counter-preserving winding nesting (nonzero),
-    xor (evenodd), disc-sweep Minkowski dilation (circumscribed caps — margins never
-    undershoot), `safe*` wrappers (martinez can throw; never let it reach React).
-  - `keepout.ts` per-layer knockout/halo regions, WeakMap-memoized, cached PRE-PHASE;
-    consumers rotate by `contributor.phaseDeg − consumer.phaseDeg` at clip time.
-- `src/io/` — fonts (bundled dozen in public/fonts + uploads + Local Font Access API
-  with TTC extraction in `ttc.ts`), svgImport (capability whitelist, warn-and-skip),
-  workspace (IndexedDB multi-button store; saver captures (id, doc) pairs at schedule
-  time — anti-corruption invariants are commented in-file and load-bearing),
-  exportSvg (mm-true die files, instance expansion default ON, project JSON embedded
-  in <metadata> so exports re-open as documents), exportPng, thumbnail.
-- `src/render/` — SvgStage (mm-true, `#doc` = export subtree, overlays separate),
-  DocRenderer (per-layer memo; comparator: layer refs + disc values + contributor
-  REGION identity — no deep geometry compares), MetalPreview (SVG filters,
-  preview-only). Keepout regions for the CANVAS are stale-while-recomputing
-  (`keepoutAsync.ts` + `keepoutWorker.ts`): edits render immediately with the
-  last-good region while the ~80–190ms union+dilation reruns in a Web Worker
-  (120ms trailing debounce, latest-wins, sync fallback on worker failure);
-  `regionsRevision` bumps on landing and the StatusBar shows a "halo…" pill
-  while pending. Regions are content-keyed (`regionKey`: phaseDeg/name excluded)
-  so phase scrubs and renames never rebuild. The worker bundle imports only
-  `keepoutRegion.ts` (no compile.ts → no opentype). exportSvg stays synchronous
-  and exact. Vite emits the worker URL root-absolute under base './' — fine at
-  the domain root; a 404 would trip the sync fallback.
-- `src/ui/` — panels per layer type, workspace switcher, dialogs.
+- `src/model/` — doc schema (`types.ts`, DOC_VERSION **1**): `LabelDoc { widthMM,
+  heightMM, fold, weave: WeaveSpec, layers[] }`; four layer types (`textLine`, `motif`,
+  `border`, `repeatRow`), every layer carries `weftIndex` — index into `weave.wefts`,
+  or `GROUND_WEFT_INDEX (-1)` = woven in the warp = knockout (reversed-out labels).
+  `loom.ts` is the single source of truth: `LOOM_TABLE[loom][ground]` (densities,
+  maxWefts, jitter/fuzz/sheen, default edge) + `THREAD_CANON`. `migrate.ts` (empty
+  table — copy Buttonic's defaults-spread-FIRST convention when v2 lands),
+  hand-rolled `validate.ts` (REQUIRED tables; `weftIndex` is CLAMPED not rejected so
+  palette edits never brick a file), `presets.ts` (blank + 5 era templates; literals
+  carry EVERY field, fixed layer ids, golden-snapshotted).
+- `src/geometry/` — the pure cartesian kernel (NO DOM/React/IO; node-tested):
+  - `shapes.ts` Shape IR — byte-identical to Buttonic's (`circle|line|path|instanced`);
+    `circle` is simply unused here. Exact-first: glyphs/motifs stay true beziers under
+    affine; polylines only for warped (bent-arch) output.
+  - `compile.ts` WeakMap-memoized per-layer dispatch; `CompileCtx` carries label dims
+    AND grid densities (legibility warnings recompute when density changes).
+  - `textLine.ts` — straight or arched baselines. Arch: circle radius
+    `R = W²/(8|s|) + |s|/2` (chord W = laid-out width, sagitta s = `archMM`), ARC
+    LENGTH preserved along the baseline. `'arc'` mode = upright glyphs rotated tangent
+    (exact beziers, the classic look); `'warp'` mode = outlines genuinely bent via
+    `archWarp` + the generic flatten-then-warp machinery in `warp.ts` (never warp
+    bezier control points — the map is not affine). Legibility warning when a
+    ~0.09 em stem spans < 1.6 threads: phrased softly, chunky is the point.
+  - `border.ts` — rules are rect paths; patterned sides emit ONE instanced shape per
+    side (`n = round(len/unit)`, pitch = len/n → symmetric margins by construction;
+    unit motifs live in `BORDER_UNITS`, one pitch wide, +y pointing INTO the label on
+    the clockwise walk). `repeatRow.ts` — one instanced shape, count 1 = centred.
+  - `folds.ts` — fold lines + `visiblePanelMM` (endFold trims 3 mm allowances,
+    loopFold shows the top half, centreFold the right half, mitre full face).
+  - Carried verbatim from Buttonic: `glyphs.ts`, `mat2d.ts`, `flatten.ts`,
+    `pathData.ts`, `format.ts` (`fmt` everything), `svgAsset.ts`, `expand.ts`,
+    `motifs/builtins.ts` (~142 motifs incl. the new `Label` group — geometric-first;
+    an 8 mm motif at 2.8 picks/mm is 22 cells tall, figurative reads as mush).
+- `src/weave/` — the weave simulation:
+  - `grid.ts` (pure, node-tested) — `WeaveGrid { cols, rows, cellWMM, cellHMM,
+    data: Uint8Array }` (0 = ground, k = weft k−1); `boxAverageAlpha` (uniform-scale
+    raster → exact per-cell coverage in one O(raster) pass); `claimFromCoverage`
+    (≥ 0.5, later layers overwrite, 0-claims knock out); `hash2` deterministic jitter
+    (NEVER Math.random — threads must not shimmer across renders); `gridChecksum`
+    (FNV-1a, the scripted-verification fingerprint).
+  - `sample.ts` — rasterize each layer ALONE at a UNIFORM supersample scale
+    (`min(20, 2·max density)` px/mm; a non-uniform cell-resolution transform would
+    distort canvas stroke widths — the pen transforms with the CTM), read alpha,
+    box-average, claim. Per-layer coverage cache on layer identity (immer keeps
+    untouched layers stable), key mirrors the compile memo.
+  - `paint.ts` — weft floats render as RUNS: a horizontal stretch of same-thread
+    cells is one continuous capsule (round ends only at turn-unders), warp dimples
+    across it, per-run wobble from `hash2`, lit-edge gradient from the light azimuth,
+    sheen stripe + fuzz halo per `LOOM_TABLE` profile. Ground = 2×2-cell
+    `createPattern` tile (`threadSprites.ts`: taffeta checker / satin floats /
+    damask twill). Selvedge turn-backs vs hot/ultrasonic cut sides; shuttle fray
+    ticks vs needle cut lines on the ends. `paintFoldedWeave` renders the flat weave
+    offscreen and composites the visible panel with drop shadow + fold-roll
+    gradients + mitre crease triangles.
+  - Measured budget: 50×22 shuttle ≈ 7.4k cells ≈ 13 ms sample + 3 ms paint;
+    72×40 needle damask ≈ 161k cells ≈ 82 + 7 ms. No worker needed; if a device
+    ever disproves this, Buttonic's keepoutAsync stale-while-recomputing pattern is
+    the escape hatch.
+- `src/render/` — `SvgStage` (mm-true svg; `#doc` = export subtree; in woven mode the
+  backdrop unmounts and `#doc` fades to opacity 0 but STAYS MOUNTED — hit rects keep
+  selection working over the canvas and the font/asset load kicks keep running),
+  `WeaveStage` (canvas UNDER the svg, rAF-coalesced on-change, no frame loop),
+  `DocRenderer` (per-layer memo on layer ref + hex + ctx fields; `layerBoundsMM` is
+  the cartesian hit/selection geometry), overlays (`Guides` — outline, safe area,
+  fold lines, auto-hidden in the folded presentation; `Handles` — position grips +
+  border inset grip, every drag one undo step via beginGesture/endGesture).
+- `src/io/` — fonts/localFonts/ttc/svgImport/svgAssets/workspace/idb carried from
+  Buttonic (DB `labelic`, pointer `labelic:current`, no legacy migration);
+  `exportSvg.ts` = mm-true ARTWORK export: per-layer `<g data-thread="Gold #C9A24B">`
+  filled in the layer's weft hex (the capped palette IS the mill deliverable),
+  optional ground rect + fold-guide group, `<metadata id="labelic-project">` embeds
+  the project so exports re-open (`extractEmbeddedProject`); warnings for sub-pick
+  strokes, off-label geometry, palette over loom cap, cell budget (>350k).
+  `exportWovenPng.ts` (the exact on-screen paint path at 1024/2048/4096, flat or
+  folded), `exportDraftPng.ts` (the grid, 1 px/cell ×4 nearest-neighbour),
+  `project.ts` (`.label.json`), `thumbnail.ts` (real-color artwork thumbs).
+- `src/ui/` — DocPanel (size presets, loom/ground/edge/density with reset-to-profile,
+  PaletteEditor with the thread canon + custom, add capped at `maxWeftsFor`,
+  `removeWeft` remaps every layer's weftIndex in ONE undo step), per-type panels with
+  a ThreadRow strip on top (one click = one thread; the ground chip is the knockout),
+  LabelSwitcher workspace popover, ExportDialog with live `useMemo` warnings.
 
-## Invariants (violating these breaks real dies)
+## Invariants
 
-1. **Conventions:** mm units; degrees, 0° at 12 o'clock, CLOCKWISE, y-down
-   (`polar.ts`, test-locked). Instance angles are exact `k*360/N`, never accumulated.
-2. **Stroke semantics:** stroked geometry = constant-width cut (centreline + strokeMM);
-   filled = outline fill. Never `vector-effect`. Line clipping is centreline-based.
-   Per-layer stroke `cap` (butt/round/square, hatch/repeat) + `join` (miter/round/bevel,
-   repeat) via `SvgStrokeCap`/`StrokeJoin`; `join` is OMITTED from paint when miter so
-   goldens stay byte-identical. Hatch `cap: 'point'` synthesizes a filled tapered spindle
-   (SVG has no pointed cap) — kept out of the SVG-valid `SvgStrokeCap`.
-3. **`phaseDeg` never enters compiled geometry or cached regions** — render-time
-   rotation only.
-4. **Golden snapshots** (`src/model/__snapshots__/`) are the acceptance contract for
-   the two reference presets. NEVER `vitest -u`. A golden diff = your change altered
-   existing documents' output = wrong.
-5. Exports contain plain black fills/strokes — no masks, no filters, no CSS,
-   no currentColor. Compound knockouts are evenodd paths of disjoint polygons.
-6. Every emitted number goes through `fmt` (deterministic goldens, small files).
+1. mm units everywhere; (0,0) = label centre, y-down. Cells are NOT square
+   (`endsPerMM` ≠ `picksPerMM`) — never assume square anywhere in weave/.
+2. Every emitted number goes through `fmt` (deterministic goldens, small files).
+3. **Golden snapshots** (`src/model/__snapshots__/`) are the acceptance contract for
+   the five era presets. NEVER `vitest -u`. A golden diff = your change altered
+   existing documents' output = wrong. New schema fields default to old behaviour.
+   The one warning class presets may carry is the informational legibility warning.
+4. Artwork SVG contains plain palette-hex fills/strokes — no filters, masks, CSS.
+   Overdraw is fine (mills read flat color art); the weave resolves overlap by claim
+   priority instead.
+5. Weave determinism: all jitter through `hash2(col, row, seed)`; no Math.random in
+   src/weave or src/geometry. Sprite/tile caches quantize their keys so light-slider
+   scrubs stay cache-friendly.
+6. `weftIndex` semantics: −1 = ground knockout; validator CLAMPS out-of-range values;
+   `removeWeft` remaps (> index decrements, === index → 0, −1 untouched).
 
 ## Testing & verification culture
 
-185 vitest tests: kernel invariants (warp/dilation/winding/clip math with analytic
-area checks), golden preset snapshots, migration round-trips, workspace anti-corruption
-regressions, bundled-font + builtin-motif smoke tests (parse + outlines + in-box +
-license), e2e boolean acceptance (reversed-monogram counter preservation, phase tracking,
-pointed-hatch halo clipping).
+140 vitest tests: kernel analytics (arch radius/warp map against closed forms, border
+pitch fitting, row spreading, fold panels), grid math (box-average on synthetic
+rasters, claim/knockout semantics, hash determinism), golden preset snapshots,
+serialize/clamp round-trips, workspace anti-corruption regressions, bundled-font +
+motif unit-box smoke tests. The canvas painter is deliberately NOT node-tested (jsdom
+has no canvas; a canvas dep would violate minimal-deps) — its gate is the scripted
+browser pass: `window.__labelic.debug.gridChecksum` + `weaveTimings` per preset.
 After code changes: typecheck + full suite, then ONE browser acceptance pass via the
-preview tools + `window.__engraver`, then push (CI re-gates).
+preview tools + `window.__labelic`, then push (CI re-gates).
 
 ## Known limits / backlog
 
-- opentype.js: no WOFF2, no CFF2, GPOS kerning partial (Cinzel kerns; EB Garamond's
-  pairs unreadable — letter-spacing is the escape hatch). macOS .ttc handled via
-  `ttc.ts` extraction.
-- Local fonts are Chromium-only by design; projects store references (postscript name),
-  not bytes; exports always bake outlines. Explicit per-font Embed action exists.
-- Halo dilation is martinez's worst case: disc-sweep capsules (~200ms, memoized).
-  Thin-rect capsules are slower AND crash — don't "optimize" back to them. Same reason
-  pointed-hatch ticks (thin filled spindles) are halo-clipped by centreline, not martinez.
-- Pointed hatch ticks are filled, so the def-level clearance-disc trim (a stroked-line
-  fast path) doesn't apply — a pointed band is bounded by its own rInner/rOuter, not by a
-  centre clearance moat.
-- Multi-tab workspace = last-write-wins (BroadcastChannel is future work).
-- Deferred: bezier re-fitting of warped polylines, DXF export, three.js relief.
+- opentype.js: no WOFF2/CFF2; GPOS kerning partial (Cinzel kerns; EB Garamond's pairs
+  unreadable — letter-spacing is the escape hatch). Local fonts Chromium-only;
+  exports always bake outlines.
+- Pinyon script hairlines fragment at shuttle densities — authentic, but consider a
+  heavier script face if Liam wants smoother 1950s presets.
+- Border corners butt at insets ('auto' margins); corner ornaments are post-v1.
+- Presentation backlog (explicitly deferred from v1): sewn-on-garment backdrop scene,
+  stitches, aging/wear slider. Multi-tab workspace = last-write-wins.
+- The `½` glyph was dropped from the denim preset pending a font-coverage check
+  ('SIZE 16'); restore as 'SIZE 16½' if robotoslab carries U+00BD.
 
 ## Working with Liam
 
-Design-literate founder (liet.co / fluorescent.co). Communicates via reference imagery —
-recreating the reference IS the acceptance test. Prefers a clear recommendation over
-option menus. Session pattern: plan in plan-mode first (sometimes Fable plans /
-Opus executes — plans must then be fully self-contained), lean execution, one browser
-acceptance pass, ship to live. Public repo visibility, commits, and domain changes were
-each explicitly user-approved — keep confirming outward-facing actions of new kinds.
-
-When a visual bug won't reproduce from a screenshot, ask for the exported `.button` JSON
-and load it — the exact layer settings (e.g. a hatch `cap: 'point'`, local font ids) are
-usually the missing clue; guessing a repro wastes rounds. `~/Downloads` is macOS-TCC-
-protected (Read/cp fail even with sandbox off), so have him drop the file into the repo
-folder. Verify panel-UI changes at the REAL inspector width (~272px, fixed), not a wide
-preview window; stack 4-option segmented controls (label above) so they don't overflow.
+Design-literate founder (liet.co / fluorescent.co). Communicates via reference
+imagery — recreating the reference IS the acceptance test. Prefers a clear
+recommendation over option menus. Session pattern: plan in plan-mode first, lean
+execution, one browser acceptance pass, ship. Public repo visibility, commits, and
+domain changes were each explicitly user-approved on Buttonic — keep confirming
+outward-facing actions of new kinds. Verify panel-UI changes at the REAL inspector
+width (~272 px, fixed); stack 4-option segmented controls.

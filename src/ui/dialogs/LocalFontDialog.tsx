@@ -73,7 +73,7 @@ export function LocalFontDialog({
         {phase.kind === 'intro' && (
           <>
             <p className="modal-blurb">
-              Buttonic can list the fonts installed on this machine and engrave with them. The
+              Labelic can list the fonts installed on this machine and weave with them. The
               browser will ask permission once; font data is read only for fonts you pick, and
               nothing leaves your computer.
             </p>

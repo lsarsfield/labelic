@@ -1,95 +1,57 @@
-# Buttonic
+# Labelic
 
-**Live app: <https://buttonic.app>**
+A browser tool for designing **vintage woven garment labels** — the fabric brand tags sewn
+into clothing. Its premise: a woven label is a bitmap made of threads. The design is
+rasterized onto the loom's grid and every cell is woven in exactly one weft thread, so
+chunky stair-stepped type and quantized motifs aren't a limitation — they're the look.
 
-A browser tool for designing the engraved face of metal jean buttons. Its whole premise is
-**true radial geometry from a single axis**: every element is computed from the centre
-outward — counts, radii, and angles — the way a real die-stamp is engraved. No manual
-duplicate-and-rotate, ever.
+Sibling app to [Buttonic](https://buttonic.app) (engraved jean buttons); same chassis,
+opposite fabric.
 
-```
+## What it does
+
+- **Two looms.** Shuttle (the vintage kind: coarse grids ~24–40 threads/cm, woven
+  selvedge side edges, soft cotton/rayon character, at most 3 weft colors, visible
+  thread wobble) and needle (modern: fine grids up to 100 picks/cm, hot-knife or
+  ultrasonic cut edges, polyester sheen, up to 8 wefts, machine uniformity).
+- **Three grounds.** Taffeta (matte plain-weave checker), satin (shiny warp floats),
+  damask (fine dense twill).
+- **Cartesian design layers**, each woven in ONE thread from the label's palette:
+  text lines (straight or arched baselines, real font outlines via opentype.js),
+  motifs (140+ built-ins including a label-canon group: union bug, spool, needle,
+  care symbols…), border patterns (keyline, running stitch, zigzag, scallop, greek
+  key, chain…), and repeat rows. A layer can also weave in the *ground* thread —
+  the knockout that makes classic reversed-out labels.
+- **Thread-true woven preview.** Weft floats render as continuous runs with turn-under
+  ends, warp dimples, per-loom jitter/fuzz/sheen, selvedge turn-backs or melt-cut
+  edges, and a light-angle control. Folds (end, loop, centre, mitre) present as
+  actually folded cloth.
+- **Exports.** mm-true artwork SVG with the capped thread palette (what a label mill
+  weaves from; the project JSON is embedded so exports re-open as documents), woven
+  PNG mockups at 1024/2048/4096 px (flat or folded), a weave-draft PNG (the grid,
+  one pixel per thread crossing), and portable `.label.json` projects.
+- **Five era templates.** 1940s workwear, 1950s dressmaker, 1960s union, 1970s denim,
+  modern streetwear — each a golden-snapshot acceptance test.
+
+## Running
+
+```sh
 npm install
-npm run dev        # http://localhost:5173
-npm test           # geometry-kernel + import + golden-preset tests
-npm run build      # typecheck + production build
+npm run dev        # vite, port 5173
+npm test           # vitest (140 tests)
+npm run typecheck
+npm run build
 ```
 
-## The model
+Local fonts use the Local Font Access API (Chromium). Projects live in a local
+IndexedDB workspace with autosave; exported SVGs re-open as editable documents.
 
-A document is a **ring-layer stack** (centre → rim) over a mm-true canvas. Six layer types
-cover the radial vocabulary:
+## Architecture (one paragraph)
 
-| Layer | What it computes |
-|---|---|
-| **ring** | circle stroke or filled annulus (borders, rims, grooves) |
-| **hatch** | N radial ticks between two radii, with twist — reeding / engine-turned texture |
-| **repeat** | a motif (built-in library or your SVG) instanced N× around the axis; 1–2 rows with stagger + flip for herringbone |
-| **ringText** | real glyph outlines on a circular baseline (kerning, inward/outward); classic arc placement or full polar warp |
-| **center** | monogram glyph or SVG at the axis, with an optional clearance moat that clips line-work beneath |
-| **bend** | any SVG warped into an annulus band — x→angle, y→radius — repeatable around the circle |
-
-Two bundled templates recreate the reference buttons the project was built against:
-**Engine turned** (guilloche hatch bands + emblem) and **Blackletter monogram**
-(herringbone chevron band + blackletter D).
-
-## Geometry guarantees
-
-- **Exact where possible**: rings are circles, hatch ticks are lines, motifs and glyphs are
-  true beziers placed by affine transforms. Polylines appear only for polar-warped content.
-- **Flatten-then-warp**: the polar map isn't affine, so bezier control points are never
-  warped directly; curves are flattened and adaptively subdivided *in warped space*
-  (0.01 mm interactive, 0.0025 mm at export).
-- **Constant cut width**: stroked art warps its centreline and keeps its mm stroke width —
-  a graver cuts constant width. Filled art warps its outline.
-- **Seam-exact**: instance angles are exact multiples of 360/N (never accumulated) and
-  full-circle warps weld the 0°/360° seam.
-
-## Workspace
-
-Every button you work on is cached locally in the browser (IndexedDB) and autosaves as you
-edit. The `▾` next to the document name opens the switcher — thumbnails, last-edited times,
-duplicate/download/delete — and "New" always creates a fresh cached button, never
-overwriting the current one. Load projects via `Open…`, `⌘O`, or by dropping a `.json` /
-exported SVG onto the canvas; loaded files join the workspace as new entries. Nothing
-leaves your machine; private-mode browsers fall back to a session-only workspace with a
-warning banner.
-
-## Export
-
-- **SVG die file** — millimetre-true (`width="17mm"`, user units = mm), instances expanded
-  to plain paths by default (CAM software dislikes `<use>`), optional mirror-for-die,
-  warnings for sub-0.05 mm strokes and geometry off the face. The project JSON is embedded
-  in `<metadata>`, so an exported SVG re-opens as a document.
-- **PNG mockup** — flat or metal-preview rendering at 1024/2048/4096 px.
-- **Project JSON** — portable save/load with fonts and SVG assets embedded base64.
-
-## Fonts
-
-A bundled dozen (OFL/Apache, licenses in `public/fonts/`, lazy-loaded on first use):
-Cinzel (engraved caps), EB Garamond (classic serif), UnifrakturCook (blackletter),
-Roboto (universal sans), Oswald (condensed industrial), Playfair Display (didone),
-Jost (geometric), Roboto Slab, Pinyon Script (copperplate), Rye (western),
-Allerta Stencil, Bebas Neue (display caps).
-Upload any `.ttf`/`.otf`. Kerning uses what opentype.js can read (GPOS support varies by
-font — letter-spacing is the manual escape hatch). No WOFF2.
-
-**Local fonts** (Chrome/Edge): the font picker's `Local…` button browses the fonts
-installed on your machine via the Local Font Access API — one permission prompt, previews
-rendered in each font, TrueType Collections (`.ttc`, most macOS system fonts) unpacked
-automatically. Projects store local fonts as *references*, not bytes: on a machine without
-the font, the design keeps its settings and shows a re-link prompt instead of that text —
-but exported SVG/PNG always contain baked outlines and render everywhere. A per-font
-**Embed** action copies the bytes into the project when you explicitly want a portable
-file (mind the font's license).
-
-## Keyboard
-
-`⌘Z / ⇧⌘Z` undo/redo · `⌘S` save project · `⌘O` open project · `⌘D` duplicate layer · `⌫` delete layer ·
-`[ ]` reorder · `0 / = / -` zoom fit/in/out · `M` metal preview · `Esc` deselect ·
-space-drag / middle-drag pan · `⌘`+wheel zoom · arrow keys nudge fields (⇧ ×10, ⌥ ×0.1) ·
-drag field labels to scrub · ⌥ bypasses snapping while dragging.
-
-## Out of scope (v1)
-
-Fill-vs-fill boolean knockouts (`polygon-clipping` is the v2 candidate), bezier re-fitting
-of warped polylines, DXF export, three.js relief preview.
+`LabelDoc` (zustand + zundo + immer, gesture-scoped undo) → pure per-layer compilers
+(`src/geometry/`) → a tiny Shape IR → three consumers: the SVG stage (flat artwork
+proofing), the mm-true SVG exporter, and the weave sampler (`src/weave/`), which
+rasterizes each layer at a uniform supersample, box-averages into the non-square
+thread grid, claims cells in paint order, and hands the `WeaveGrid` to a run-based
+Canvas2D thread painter. Loom character lives in one parameter table
+(`src/model/loom.ts`). See `CLAUDE.md` for the full map and invariants.
