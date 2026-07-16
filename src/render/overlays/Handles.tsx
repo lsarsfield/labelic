@@ -19,7 +19,7 @@ export function Handles() {
   if (!layer || !layer.visible) return null
   const px = (n: number) => n / scale
 
-  if (layer.type === 'border') {
+  if (layer.type === 'border' || (layer.type === 'hatch' && layer.area === 'label')) {
     return <InsetGrip layer={layer} widthMM={widthMM} heightMM={heightMM} px={px} />
   }
   return <PositionGrip layer={layer} px={px} />
@@ -57,7 +57,7 @@ function PositionGrip({
   layer,
   px,
 }: {
-  layer: Extract<Layer, { type: 'textLine' | 'motif' | 'repeatRow' }>
+  layer: Extract<Layer, { type: 'textLine' | 'motif' | 'hatch' | 'repeatRow' }>
   px: (n: number) => number
 }) {
   const updateLayer = useLabel((s) => s.updateLayer)
@@ -90,7 +90,7 @@ function InsetGrip({
   heightMM,
   px,
 }: {
-  layer: Extract<Layer, { type: 'border' }>
+  layer: Extract<Layer, { type: 'border' | 'hatch' }>
   widthMM: number
   heightMM: number
   px: (n: number) => number

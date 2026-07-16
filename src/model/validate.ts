@@ -28,13 +28,24 @@ const BORDER_PATTERNS = ['keyline', 'doubleRule', 'dashes', 'dots', 'zigzag', 's
 const REQUIRED: Record<LayerType, Record<string, 'n' | 's' | 'b'>> = {
   textLine: {
     text: 's', fontId: 's', sizeMM: 'n', xMM: 'n', yMM: 'n', anchorAlign: 's',
-    letterSpacingMM: 'n', useKerning: 'b', archMM: 'n', archMode: 's',
+    letterSpacingMM: 'n', useKerning: 'b', archMM: 'n', archMode: 's', haloMM: 'n',
   },
-  motif: { xMM: 'n', yMM: 'n', sizeMM: 'n', rotationDeg: 'n', mirrorX: 'b', strokeMM: 'n' },
-  border: { pattern: 's', insetMM: 'n', strokeMM: 'n', unitMM: 'n', sides: 's' },
+  motif: {
+    xMM: 'n', yMM: 'n', sizeMM: 'n', rotationDeg: 'n', mirrorX: 'b', strokeMM: 'n',
+    cap: 's', join: 's', haloMM: 'n',
+  },
+  hatch: {
+    angleDeg: 'n', pitchMM: 'n', strokeMM: 'n', cap: 's', area: 's', insetMM: 'n',
+    xMM: 'n', yMM: 'n', widthMM: 'n', heightMM: 'n',
+  },
+  border: {
+    pattern: 's', insetMM: 'n', strokeMM: 'n', unitMM: 'n', sides: 's',
+    cap: 's', join: 's',
+  },
   repeatRow: {
     count: 'n', xMM: 'n', yMM: 'n', widthMM: 'n', sizeMM: 'n',
-    alternateFlip: 'b', strokeMM: 'n',
+    alternateFlip: 'b', strokeMM: 'n', rows: 'n', rowGapMM: 'n',
+    staggerRow2: 'b', flipRow2: 'b', cap: 's', join: 's', haloMM: 'n',
   },
 }
 
@@ -62,6 +73,9 @@ function checkLayer(value: unknown, index: number): string | null {
 
   if (type === 'border' && !BORDER_PATTERNS.includes(value.pattern as string)) {
     return `layer ${index} ("${value.name}") has an unknown border pattern`
+  }
+  if (type === 'hatch' && value.area !== 'label' && value.area !== 'rect') {
+    return `layer ${index} ("${value.name}") has an unknown hatch area`
   }
   if ((type === 'motif' || type === 'repeatRow') && !checkMotifSource(value.source)) {
     return `layer ${index} ("${value.name}") has an invalid motif source`

@@ -6,11 +6,12 @@ import { useLabel } from '../state/store'
 const TYPE_BADGES: Record<LayerType, string> = {
   textLine: 'TX',
   motif: 'MF',
+  hatch: 'HA',
   border: 'BD',
   repeatRow: 'RW',
 }
 
-const ADDABLE: LayerType[] = ['textLine', 'motif', 'border', 'repeatRow']
+const ADDABLE: LayerType[] = ['textLine', 'motif', 'hatch', 'border', 'repeatRow']
 
 export function LayerList() {
   const layers = useLabel((s) => s.doc.layers)

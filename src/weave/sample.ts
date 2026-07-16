@@ -2,6 +2,7 @@ import type { LabelDoc, Layer } from '../model/types'
 import { GROUND_WEFT_INDEX } from '../model/types'
 import { compileLayer, compileCtxKey, INTERACTIVE_TOLERANCE_MM, type CompileCtx } from '../geometry/compile'
 import { defMatrix } from '../geometry/expand'
+import { dilatedShapes, haloOf } from '../geometry/halo'
 import type { CompiledLayer } from '../geometry/shapes'
 import { getLoadedFont } from '../io/fonts'
 import { getSvgAsset } from '../io/svgAssets'
@@ -118,6 +119,8 @@ function paintShape(
 interface CoverageCacheEntry {
   key: string
   coverage: Float32Array
+  /** Dilated silhouette coverage — present only when the layer has a halo. */
+  haloCoverage: Float32Array | null
 }
 
 const coverageCache = new WeakMap<Layer, CoverageCacheEntry>()
@@ -153,14 +156,32 @@ export function sampleDoc(doc: LabelDoc, revs: SampleRevisions): SampleResult {
     if (!layer.visible) continue
     const compiled = compileLayer(layer, ctx)
     if (compiled.shapes.length === 0) continue
+    const halo = haloOf(layer)
 
     let entry = coverageCache.get(layer)
     if (!entry || entry.key !== cacheKey) {
       const { alpha, w, h } = rasterizeLayerAlpha(compiled, doc.widthMM, doc.heightMM, pxPerMM)
-      entry = { key: cacheKey, coverage: boxAverageAlpha(alpha, w, h, grid.cols, grid.rows) }
+      let haloCoverage: Float32Array | null = null
+      if (halo > 0) {
+        const dilated = rasterizeLayerAlpha(
+          { shapes: dilatedShapes(compiled.shapes, halo), warnings: [] },
+          doc.widthMM,
+          doc.heightMM,
+          pxPerMM,
+        )
+        haloCoverage = boxAverageAlpha(dilated.alpha, dilated.w, dilated.h, grid.cols, grid.rows)
+      }
+      entry = {
+        key: cacheKey,
+        coverage: boxAverageAlpha(alpha, w, h, grid.cols, grid.rows),
+        haloCoverage,
+      }
       coverageCache.set(layer, entry)
     }
 
+    // the halo claims ground FIRST (the clearance moat), then the true
+    // silhouette claims the thread — exactly Buttonic's keepout semantics
+    if (entry.haloCoverage) claimFromCoverage(grid, entry.haloCoverage, 0)
     const paletteValue =
       layer.weftIndex === GROUND_WEFT_INDEX
         ? 0

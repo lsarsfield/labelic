@@ -5,6 +5,7 @@ import { useSelectedLayer } from '../state/selectors'
 import { ThreadRow } from './controls/ThreadRow'
 import { BorderPanel } from './panels/BorderPanel'
 import { DocPanel } from './panels/DocPanel'
+import { HatchPanel } from './panels/HatchPanel'
 import { MotifPanel } from './panels/MotifPanel'
 import { RepeatRowPanel } from './panels/RepeatRowPanel'
 import { TextLinePanel } from './panels/TextLinePanel'
@@ -39,6 +40,8 @@ function TypePanel({ layer }: { layer: Layer }) {
       return <TextLinePanel layer={layer} />
     case 'motif':
       return <MotifPanel layer={layer} />
+    case 'hatch':
+      return <HatchPanel layer={layer} />
     case 'border':
       return <BorderPanel layer={layer} />
     case 'repeatRow':

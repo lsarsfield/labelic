@@ -3,6 +3,7 @@ import { CELL_BUDGET, GROUND_WEFT_INDEX, maxWeftsFor } from '../model/types'
 import { compileLayer, EXPORT_TOLERANCE_MM, type CompileCtx } from '../geometry/compile'
 import { expandInstanced, defMatrix } from '../geometry/expand'
 import { foldLinesMM } from '../geometry/folds'
+import { dilatedShapes, haloOf } from '../geometry/halo'
 import { fmt } from '../geometry/format'
 import { flattenSegs } from '../geometry/flatten'
 import { parsePathData, transformSegs } from '../geometry/pathData'
@@ -186,6 +187,20 @@ export function exportArtworkSvg(
 
     const { hex, threadName } = exportHex(doc, layer)
     const body: string[] = []
+    // halo: the clearance moat under-painted in the warp color, inside this
+    // layer's group (above lower layers, below the layer's own thread)
+    const halo = haloOf(layer)
+    if (halo > 0) {
+      dilatedShapes(compiled.shapes, halo).forEach((shape, si) => {
+        if (shape.kind === 'instanced' && options.expandInstances) {
+          for (const flat of expandInstanced(shape)) {
+            shapeToMarkup(flat, doc.weave.warp.hex, '', body, defs)
+          }
+        } else {
+          shapeToMarkup(shape, doc.weave.warp.hex, `halo-${layer.id}-${si}`, body, defs)
+        }
+      })
+    }
     compiled.shapes.forEach((shape, si) => {
       if (shape.paint.stroke && shape.paint.stroke.widthMM < minStrokeMM) {
         warnings.push(

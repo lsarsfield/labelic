@@ -154,7 +154,7 @@ export function compileBorder(
     shapes.push({
       kind: 'instanced',
       def: { d: unit.d, dx: 0, dy: 0, rotateDeg: 0, scale: pitch, flipY: 1 },
-      paint: unit.paintType === 'fill' ? fillPaint() : strokePaint(layer.strokeMM, 'round'),
+      paint: unit.paintType === 'fill' ? fillPaint() : strokePaint(layer.strokeMM, layer.cap, layer.join),
       transforms,
     })
   }

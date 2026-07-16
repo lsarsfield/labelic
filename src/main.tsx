@@ -8,6 +8,7 @@ import { exportArtworkSvg, extractEmbeddedProject } from './io/exportSvg'
 import { exportDraftPng } from './io/exportDraftPng'
 import { exportWovenPng } from './io/exportWovenPng'
 import { loadProjectFile } from './io/project'
+import { uploadSvg } from './io/svgAssets'
 import * as workspace from './io/workspace'
 import { presetBlank, TEMPLATES } from './model/presets'
 import { parseDoc } from './model/serialize'
@@ -29,6 +30,7 @@ if (import.meta.env.DEV) {
       extractEmbeddedProject,
       parseDoc,
       loadProjectFile,
+      uploadSvg,
       workspace,
       presets: { presetBlank },
       templates: TEMPLATES,

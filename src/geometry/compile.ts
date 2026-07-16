@@ -1,6 +1,7 @@
 import type { Font } from 'opentype.js'
 import type { Layer } from '../model/types'
 import { compileBorder } from './border'
+import { compileHatch } from './hatch'
 import { compileMotif } from './motifLayer'
 import { compileRepeatRow } from './repeatRow'
 import { compileTextLine } from './textLine'
@@ -58,6 +59,8 @@ function compileByType(layer: Layer, ctx: CompileCtx): CompiledLayer {
       )
     case 'motif':
       return compileMotif(layer, ctx.getSvgAsset)
+    case 'hatch':
+      return compileHatch(layer, ctx.widthMM, ctx.heightMM)
     case 'border':
       return compileBorder(layer, ctx.widthMM, ctx.heightMM)
     case 'repeatRow':

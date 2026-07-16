@@ -5,6 +5,7 @@ import { NumberField } from '../controls/NumberField'
 import { SegmentedControl } from '../controls/SegmentedControl'
 import { SvgAssetPicker } from '../controls/SvgAssetPicker'
 import { Toggle } from '../controls/Toggle'
+import { StrokeControls } from './StrokeControls'
 
 export function MotifPanel({ layer }: { layer: MotifLayer }) {
   const updateLayer = useLabel((s) => s.updateLayer)
@@ -69,6 +70,21 @@ export function MotifPanel({ layer }: { layer: MotifLayer }) {
           step={0.05}
           unit="mm"
           onChange={(strokeMM) => up({ strokeMM })}
+        />
+        <StrokeControls
+          cap={layer.cap}
+          join={layer.join}
+          onCap={(cap) => up({ cap })}
+          onJoin={(join) => up({ join })}
+        />
+        <NumberField
+          label="Halo"
+          value={layer.haloMM}
+          min={0}
+          max={5}
+          step={0.1}
+          unit="mm"
+          onChange={(haloMM) => up({ haloMM })}
         />
       </div>
     </>

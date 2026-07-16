@@ -37,7 +37,7 @@ export type AssetId = string
 export type LayerId = string
 export type FontId = string
 
-export const DOC_VERSION = 1
+export const DOC_VERSION = 2
 
 /** SVG-valid stroke end styles. */
 export type SvgStrokeCap = 'butt' | 'round' | 'square'
@@ -146,6 +146,11 @@ export interface TextLineLayer extends LayerBase {
   archMM: number
   /** arc = upright glyphs rotated along the arc (default); warp = outlines genuinely bent. */
   archMode: 'arc' | 'warp'
+  /**
+   * > 0: a ground-woven clearance moat this wide around the glyphs — clears
+   * hatch/pattern layers below so the text stays readable (the mask system).
+   */
+  haloMM: number
 }
 
 /** A single motif or imported SVG placed on the label. */
@@ -160,6 +165,31 @@ export interface MotifLayer extends LayerBase {
   mirrorX: boolean
   /** Stroke width for stroke-type motifs. */
   strokeMM: number
+  /** End style for stroke-type motifs (line-cap). */
+  cap: StrokeCap
+  /** Corner style for stroke-type motifs (line-join). */
+  join: StrokeJoin
+  /** > 0: ground-woven clearance moat around the motif (see TextLineLayer). */
+  haloMM: number
+}
+
+/** Parallel stripes at any angle filling a region — pinstripes, twill bands, shading. */
+export interface HatchLayer extends LayerBase {
+  type: 'hatch'
+  /** Stripe direction, clockwise from vertical: 0 = warp-wise, 90 = horizontal. */
+  angleDeg: number
+  /** Centre-to-centre stripe spacing. */
+  pitchMM: number
+  strokeMM: number
+  cap: StrokeCap
+  /** label = the whole face inset by insetMM; rect = the xMM/yMM/widthMM/heightMM band. */
+  area: 'label' | 'rect'
+  insetMM: number
+  /** rect mode: region centre + size. */
+  xMM: number
+  yMM: number
+  widthMM: number
+  heightMM: number
 }
 
 export type BorderPattern =
@@ -193,9 +223,13 @@ export interface BorderLayer extends LayerBase {
   /** Pattern repeat pitch along each side (patterned borders only). */
   unitMM: number
   sides: 'all' | 'topBottom' | 'leftRight'
+  /** End style for pattern units (rules are continuous and keep butt ends). */
+  cap: StrokeCap
+  /** Corner style for pattern units. */
+  join: StrokeJoin
 }
 
-/** A horizontal row of a repeated small motif — divider stars, dots, diamonds. */
+/** A row (or staggered pair of rows) of a repeated small motif. */
 export interface RepeatRowLayer extends LayerBase {
   type: 'repeatRow'
   source: MotifSource
@@ -211,15 +245,29 @@ export interface RepeatRowLayer extends LayerBase {
   alternateFlip: boolean
   /** Stroke width for stroke-type motifs. */
   strokeMM: number
+  rows: 1 | 2
+  /** Vertical distance between row centres (rows = 2). */
+  rowGapMM: number
+  /** Offset row 2 by half an instance step. */
+  staggerRow2: boolean
+  /** Mirror row 2 (chevrons pointing the other way = herringbone). */
+  flipRow2: boolean
+  /** End style for stroke-type motifs (line-cap). */
+  cap: StrokeCap
+  /** Corner style for stroke-type motifs (line-join). */
+  join: StrokeJoin
+  /** > 0: ground-woven clearance moat around the row (see TextLineLayer). */
+  haloMM: number
 }
 
-export type Layer = TextLineLayer | MotifLayer | BorderLayer | RepeatRowLayer
+export type Layer = TextLineLayer | MotifLayer | HatchLayer | BorderLayer | RepeatRowLayer
 
 export type LayerType = Layer['type']
 
 export const LAYER_TYPE_LABELS: Record<LayerType, string> = {
   textLine: 'Text line',
   motif: 'Motif',
+  hatch: 'Hatch',
   border: 'Border',
   repeatRow: 'Repeat row',
 }
@@ -251,6 +299,7 @@ export function makeTextLineLayer(patch: Partial<TextLineLayer> = {}): TextLineL
     useKerning: true,
     archMM: 0,
     archMode: 'arc',
+    haloMM: 0,
     ...patch,
   }
 }
@@ -269,6 +318,30 @@ export function makeMotifLayer(patch: Partial<MotifLayer> = {}): MotifLayer {
     rotationDeg: 0,
     mirrorX: false,
     strokeMM: 0.4,
+    cap: 'round',
+    join: 'miter',
+    haloMM: 0,
+    ...patch,
+  }
+}
+
+export function makeHatchLayer(patch: Partial<HatchLayer> = {}): HatchLayer {
+  return {
+    id: newId(),
+    type: 'hatch',
+    name: 'Hatch',
+    visible: true,
+    weftIndex: 0,
+    angleDeg: 45,
+    pitchMM: 1.4,
+    strokeMM: 0.4,
+    cap: 'butt',
+    area: 'label',
+    insetMM: 1.5,
+    xMM: 0,
+    yMM: 0,
+    widthMM: 20,
+    heightMM: 10,
     ...patch,
   }
 }
@@ -285,6 +358,8 @@ export function makeBorderLayer(patch: Partial<BorderLayer> = {}): BorderLayer {
     strokeMM: 0.4,
     unitMM: 1.6,
     sides: 'all',
+    cap: 'round',
+    join: 'miter',
     ...patch,
   }
 }
@@ -304,6 +379,13 @@ export function makeRepeatRowLayer(patch: Partial<RepeatRowLayer> = {}): RepeatR
     sizeMM: 2,
     alternateFlip: false,
     strokeMM: 0.4,
+    rows: 1,
+    rowGapMM: 2,
+    staggerRow2: true,
+    flipRow2: false,
+    cap: 'round',
+    join: 'miter',
+    haloMM: 0,
     ...patch,
   }
 }
@@ -311,6 +393,7 @@ export function makeRepeatRowLayer(patch: Partial<RepeatRowLayer> = {}): RepeatR
 export const LAYER_FACTORIES: Record<LayerType, (patch?: never) => Layer> = {
   textLine: makeTextLineLayer,
   motif: makeMotifLayer,
+  hatch: makeHatchLayer,
   border: makeBorderLayer,
   repeatRow: makeRepeatRowLayer,
 }

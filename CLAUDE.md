@@ -6,9 +6,9 @@ cell is woven in exactly one weft thread from the doc palette. Chunky stair-step
 type IS the aesthetic. Sibling of Buttonic (same chassis: state/undo, workspace, fonts,
 Shape IR, export spine); cartesian where Buttonic is radial, cloth where it is metal.
 
-- **Repo:** local only so far (`~/Claude/Projects/Labelic`); GitHub repo + Pages deploy
-  pending Liam's approval. Buttonic precedent: `lsarsfield/<name>`, CI gates deploy on
-  typecheck + tests, base `./`.
+- **Live:** https://lsarsfield.github.io/labelic/ (GitHub Pages, repo
+  `lsarsfield/labelic`; push to main → CI gates deploy on typecheck + tests, base `./`).
+  Custom domain not yet chosen — CNAME + DreamHost A-records when Liam picks one.
 - **Stack:** React 19 + TS strict + Vite 6 + vitest 3 (Node 18.20.8 locally — do NOT
   bump vite to 7). Runtime deps deliberately minimal (zustand+zundo+immer, opentype.js,
   svg-pathdata). polygon-clipping was dropped in the carve — weave overlap is per-cell
@@ -24,13 +24,17 @@ extractEmbeddedProject, parseDoc, loadProjectFile, workspace, presets, templates
 
 ## Architecture map
 
-- `src/model/` — doc schema (`types.ts`, DOC_VERSION **1**): `LabelDoc { widthMM,
-  heightMM, fold, weave: WeaveSpec, layers[] }`; four layer types (`textLine`, `motif`,
-  `border`, `repeatRow`), every layer carries `weftIndex` — index into `weave.wefts`,
-  or `GROUND_WEFT_INDEX (-1)` = woven in the warp = knockout (reversed-out labels).
+- `src/model/` — doc schema (`types.ts`, DOC_VERSION **2**): `LabelDoc { widthMM,
+  heightMM, fold, weave: WeaveSpec, layers[] }`; five layer types (`textLine`, `motif`,
+  `hatch`, `border`, `repeatRow`), every layer carries `weftIndex` — index into
+  `weave.wefts`, or `GROUND_WEFT_INDEX (-1)` = woven in the warp = knockout
+  (reversed-out labels). textLine/motif/repeatRow also carry `haloMM` — a ground-woven
+  clearance moat (the mask system, see geometry/halo.ts); motif/border/repeatRow carry
+  stroke `cap`/`join`; repeatRow carries `rows/rowGapMM/staggerRow2/flipRow2`
+  (herringbone grids).
   `loom.ts` is the single source of truth: `LOOM_TABLE[loom][ground]` (densities,
-  maxWefts, jitter/fuzz/sheen, default edge) + `THREAD_CANON`. `migrate.ts` (empty
-  table — copy Buttonic's defaults-spread-FIRST convention when v2 lands),
+  maxWefts, jitter/fuzz/sheen, default edge) + `THREAD_CANON`. `migrate.ts` (v2 adds
+  the parity fields, defaults spread FIRST so stored values win — copy that pattern),
   hand-rolled `validate.ts` (REQUIRED tables; `weftIndex` is CLAMPED not rejected so
   palette edits never brick a file), `presets.ts` (blank + 5 era templates; literals
   carry EVERY field, fixed layer ids, golden-snapshotted).
@@ -47,6 +51,12 @@ extractEmbeddedProject, parseDoc, loadProjectFile, workspace, presets, templates
     `archWarp` + the generic flatten-then-warp machinery in `warp.ts` (never warp
     bezier control points — the map is not affine). Legibility warning when a
     ~0.09 em stem spans < 1.6 threads: phrased softly, chunky is the point.
+  - `hatch.ts` — parallel stripes at any angle filling the label (inset) or a band
+    rect: pure line-rect slab clipping, one stroked path. `halo.ts` — masks by
+    RE-PAINT dilation (strokes fattened by 2·halo, fills gain a fat round stroke):
+    the sampler claims ground from the dilated silhouette before the thread claim,
+    and the flat stage + artwork SVG under-paint it in warp hex — all three renderers
+    agree by construction, no boolean geometry anywhere.
   - `border.ts` — rules are rect paths; patterned sides emit ONE instanced shape per
     side (`n = round(len/unit)`, pitch = len/n → symmetric margins by construction;
     unit motifs live in `BORDER_UNITS`, one pitch wide, +y pointing INTO the label on
@@ -146,6 +156,9 @@ preview tools + `window.__labelic`, then push (CI re-gates).
 - Border corners butt at insets ('auto' margins); corner ornaments are post-v1.
 - Presentation backlog (explicitly deferred from v1): sewn-on-garment backdrop scene,
   stitches, aging/wear slider. Multi-tab workspace = last-write-wins.
+- Multi-path SVG uploads weave in ONE thread (a layer is one weft) — overlaid
+  white-on-black source shapes flatten to the thread color; holes need winding, not
+  overlays. Inherent to the medium; surface in docs if users trip on it.
 - The `½` glyph was dropped from the denim preset pending a font-coverage check
   ('SIZE 16'); restore as 'SIZE 16½' if robotoslab carries U+00BD.
 

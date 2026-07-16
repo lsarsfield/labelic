@@ -2,6 +2,7 @@ import { memo, useEffect } from 'react'
 import type { LabelDoc, Layer } from '../model/types'
 import { GROUND_WEFT_INDEX, isLocalFontId } from '../model/types'
 import { compileLayer, INTERACTIVE_TOLERANCE_MM, type CompileCtx } from '../geometry/compile'
+import { dilatedShapes, haloOf } from '../geometry/halo'
 import { textLineWidthMM } from '../geometry/textLine'
 import { ensureFontLoaded, getLoadedFont } from '../io/fonts'
 import { ensureLocalFontsResolved } from '../io/localFonts'
@@ -53,7 +54,13 @@ export function DocRenderer() {
   return (
     <>
       {doc.layers.map((layer) => (
-        <LayerGroup key={layer.id} layer={layer} ctx={ctx} hex={layerHex(doc, layer)} />
+        <LayerGroup
+          key={layer.id}
+          layer={layer}
+          ctx={ctx}
+          hex={layerHex(doc, layer)}
+          warpHex={doc.weave.warp.hex}
+        />
       ))}
     </>
   )
@@ -65,14 +72,33 @@ export function DocRenderer() {
  * target), colored by the layer's thread.
  */
 const LayerGroup = memo(
-  function LayerGroup({ layer, ctx, hex }: { layer: Layer; ctx: CompileCtx; hex: string }) {
+  function LayerGroup({
+    layer,
+    ctx,
+    hex,
+    warpHex,
+  }: {
+    layer: Layer
+    ctx: CompileCtx
+    hex: string
+    warpHex: string
+  }) {
     if (!layer.visible) return null
     const compiled = compileLayer(layer, ctx)
     const hasShapes = compiled.shapes.length > 0
+    const halo = haloOf(layer)
     return (
       <g data-layer-id={layer.id} style={{ color: hex }}>
         <HitRect layer={layer} />
         <g pointerEvents="none">
+          {hasShapes && halo > 0 && (
+            <g style={{ color: warpHex }}>
+              <ShapesRenderer
+                layerId={`${layer.id}-halo`}
+                compiled={{ shapes: dilatedShapes(compiled.shapes, halo), warnings: [] }}
+              />
+            </g>
+          )}
           {hasShapes ? (
             <ShapesRenderer layerId={layer.id} compiled={compiled} />
           ) : (
@@ -85,6 +111,7 @@ const LayerGroup = memo(
   (prev, next) =>
     prev.layer === next.layer &&
     prev.hex === next.hex &&
+    prev.warpHex === next.warpHex &&
     prev.ctx.widthMM === next.ctx.widthMM &&
     prev.ctx.heightMM === next.ctx.heightMM &&
     prev.ctx.endsPerMM === next.ctx.endsPerMM &&
@@ -129,6 +156,22 @@ export function layerBoundsMM(layer: Layer, labelWidthMM: number, labelHeightMM:
       const half = (layer.sizeMM / 2) * 1.25 // motifs are unit-height; pad for wide/rotated ones
       return { x: layer.xMM - half, y: layer.yMM - half, w: half * 2, h: half * 2 }
     }
+    case 'hatch': {
+      if (layer.area === 'rect') {
+        return {
+          x: layer.xMM - layer.widthMM / 2,
+          y: layer.yMM - layer.heightMM / 2,
+          w: layer.widthMM,
+          h: layer.heightMM,
+        }
+      }
+      return {
+        x: -labelWidthMM / 2 + layer.insetMM,
+        y: -labelHeightMM / 2 + layer.insetMM,
+        w: labelWidthMM - 2 * layer.insetMM,
+        h: labelHeightMM - 2 * layer.insetMM,
+      }
+    }
     case 'border': {
       const l = -labelWidthMM / 2 + layer.insetMM
       const t = -labelHeightMM / 2 + layer.insetMM
@@ -137,7 +180,7 @@ export function layerBoundsMM(layer: Layer, labelWidthMM: number, labelHeightMM:
     }
     case 'repeatRow': {
       const w = (layer.count > 1 ? layer.widthMM : 0) + layer.sizeMM * 1.25
-      const h = layer.sizeMM * 1.25
+      const h = layer.sizeMM * 1.25 + (layer.rows === 2 ? layer.rowGapMM : 0)
       return { x: layer.xMM - w / 2, y: layer.yMM - h / 2, w, h }
     }
   }

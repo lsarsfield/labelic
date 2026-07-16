@@ -4,6 +4,7 @@ import { useLabel } from '../../state/store'
 import { NumberField } from '../controls/NumberField'
 import { SegmentedControl } from '../controls/SegmentedControl'
 import { Select } from '../controls/Select'
+import { StrokeControls } from './StrokeControls'
 
 const PATTERNS = (Object.entries(BORDER_PATTERN_LABELS) as [BorderPattern, string][]).map(
   ([value, label]) => ({ value, label }),
@@ -45,6 +46,14 @@ export function BorderPanel({ layer }: { layer: BorderLayer }) {
             step={0.1}
             unit="mm"
             onChange={(unitMM) => up({ unitMM })}
+          />
+        )}
+        {patterned && (
+          <StrokeControls
+            cap={layer.cap}
+            join={layer.join}
+            onCap={(cap) => up({ cap })}
+            onJoin={(join) => up({ join })}
           />
         )}
         <SegmentedControl

@@ -62,6 +62,39 @@ describe('serialize round-trip', () => {
   })
 })
 
+describe('migration v1 → v2', () => {
+  it('adds parity fields with defaults, preserving stored values', () => {
+    const doc = makeBlankDoc() as unknown as Record<string, unknown>
+    doc.version = 1
+    const layers = doc.layers as Record<string, unknown>[]
+    delete layers[0]!.haloMM // a true v1 textLine
+    const r = parseDoc(JSON.stringify(doc))
+    expect(r.ok).toBe(true)
+    if (r.ok) {
+      expect(r.doc.version).toBe(DOC_VERSION)
+      const layer = r.doc.layers[0]!
+      if (layer.type !== 'textLine') throw new Error('expected textLine')
+      expect(layer.haloMM).toBe(0)
+    }
+  })
+
+  it('v1 repeatRow gains grid + stroke defaults without overwriting values', () => {
+    const row = makeRepeatRowLayer({ alternateFlip: true }) as unknown as Record<string, unknown>
+    for (const k of ['rows', 'rowGapMM', 'staggerRow2', 'flipRow2', 'cap', 'join', 'haloMM']) delete row[k]
+    const doc = { ...makeBlankDoc(), version: 1, layers: [row] }
+    const r = parseDoc(JSON.stringify(doc))
+    expect(r.ok).toBe(true)
+    if (r.ok) {
+      const layer = r.doc.layers[0]!
+      if (layer.type !== 'repeatRow') throw new Error('expected repeatRow')
+      expect(layer.rows).toBe(1)
+      expect(layer.cap).toBe('round')
+      expect(layer.join).toBe('miter')
+      expect(layer.alternateFlip).toBe(true) // stored value wins
+    }
+  })
+})
+
 describe('weftIndex clamping', () => {
   it('clamps a weftIndex beyond the palette instead of rejecting the doc', () => {
     const doc = { ...makeBlankDoc(), layers: [makeTextLineLayer({ weftIndex: 7 })] }

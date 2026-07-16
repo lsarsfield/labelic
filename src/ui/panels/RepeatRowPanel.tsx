@@ -6,6 +6,7 @@ import { SegmentedControl } from '../controls/SegmentedControl'
 import { Slider } from '../controls/Slider'
 import { SvgAssetPicker } from '../controls/SvgAssetPicker'
 import { Toggle } from '../controls/Toggle'
+import { StrokeControls } from './StrokeControls'
 
 export function RepeatRowPanel({ layer }: { layer: RepeatRowLayer }) {
   const updateLayer = useLabel((s) => s.updateLayer)
@@ -76,6 +77,55 @@ export function RepeatRowPanel({ layer }: { layer: RepeatRowLayer }) {
           step={0.05}
           unit="mm"
           onChange={(strokeMM) => up({ strokeMM })}
+        />
+        <StrokeControls
+          cap={layer.cap}
+          join={layer.join}
+          onCap={(cap) => up({ cap })}
+          onJoin={(join) => up({ join })}
+        />
+      </div>
+      <div className="field-group">
+        <SegmentedControl
+          label="Rows"
+          value={String(layer.rows)}
+          options={[
+            { value: '1', label: 'One' },
+            { value: '2', label: 'Two' },
+          ]}
+          onChange={(rows) => up({ rows: Number(rows) as 1 | 2 })}
+        />
+        {layer.rows === 2 && (
+          <>
+            <NumberField
+              label="Row gap"
+              value={layer.rowGapMM}
+              min={0.2}
+              max={20}
+              step={0.1}
+              unit="mm"
+              onChange={(rowGapMM) => up({ rowGapMM })}
+            />
+            <Toggle
+              label="Stagger row 2"
+              value={layer.staggerRow2}
+              onChange={(staggerRow2) => up({ staggerRow2 })}
+            />
+            <Toggle
+              label="Flip row 2"
+              value={layer.flipRow2}
+              onChange={(flipRow2) => up({ flipRow2 })}
+            />
+          </>
+        )}
+        <NumberField
+          label="Halo"
+          value={layer.haloMM}
+          min={0}
+          max={5}
+          step={0.1}
+          unit="mm"
+          onChange={(haloMM) => up({ haloMM })}
         />
       </div>
     </>

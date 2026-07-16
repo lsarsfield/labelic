@@ -34,6 +34,37 @@ describe('compileRepeatRow', () => {
     expect(shape.def.scale).toBe(2.5)
   })
 
+  it('two rows split around the row centre with stagger and flip', () => {
+    const out = compileRepeatRow(
+      makeRepeatRowLayer({
+        count: 3, xMM: 0, yMM: 5, widthMM: 20, rows: 2, rowGapMM: 4,
+        staggerRow2: true, flipRow2: true,
+      }),
+    )
+    const shape = out.shapes[0]!
+    if (shape.kind !== 'instanced') throw new Error('expected instanced')
+    expect(shape.transforms).toHaveLength(6)
+    const row1 = shape.transforms.slice(0, 3)
+    const row2 = shape.transforms.slice(3)
+    expect(row1.map((t) => t.dy)).toEqual([3, 3, 3])
+    expect(row2.map((t) => t.dy)).toEqual([7, 7, 7])
+    // stagger: row 2 shifted by half the 10mm pitch
+    expect(row1.map((t) => t.dx)).toEqual([-10, 0, 10])
+    expect(row2.map((t) => t.dx)).toEqual([-5, 5, 15])
+    // flip: every row-2 instance mirrored
+    expect(row1.every((t) => !t.mirrorX)).toBe(true)
+    expect(row2.every((t) => t.mirrorX)).toBe(true)
+  })
+
+  it('flipRow2 composes with alternateFlip as XOR', () => {
+    const out = compileRepeatRow(
+      makeRepeatRowLayer({ count: 2, widthMM: 10, rows: 2, alternateFlip: true, flipRow2: true, staggerRow2: false }),
+    )
+    const shape = out.shapes[0]!
+    if (shape.kind !== 'instanced') throw new Error('expected instanced')
+    expect(shape.transforms.map((t) => t.mirrorX)).toEqual([false, true, true, false])
+  })
+
   it('unknown motif warns instead of crashing', () => {
     const out = compileRepeatRow(
       makeRepeatRowLayer({ source: { kind: 'builtin', motifId: 'no-such-motif' } }),

@@ -32,13 +32,16 @@ export function compileMotif(
         {
           kind: 'path',
           d: segsToD(transformSegs(parsePathData(motif.d), m)),
-          paint: motif.paintType === 'stroke' ? strokePaint(layer.strokeMM, 'round') : fillPaint(),
+          paint: motif.paintType === 'stroke' ? strokePaint(layer.strokeMM, layer.cap, layer.join) : fillPaint(),
         },
       ],
       warnings: [],
     }
   }
 
+  if (!layer.source.assetId) {
+    return { shapes: [], warnings: ['Choose or upload an SVG.'] }
+  }
   const asset = getSvgAsset(layer.source.assetId)
   if (!asset) return { shapes: [], warnings: ['Parsing SVG…'] }
   if (asset.paths.length === 0 || asset.box.w <= 0 || asset.box.h <= 0) {
@@ -56,7 +59,7 @@ export function compileMotif(
     kind: 'path',
     d: segsToD(transformSegs(p.segs, m)),
     fillRule: p.fillRule,
-    paint: p.stroke && !p.fill ? strokePaint(layer.strokeMM, 'round') : fillPaint(),
+    paint: p.stroke && !p.fill ? strokePaint(layer.strokeMM, layer.cap, layer.join) : fillPaint(),
   }))
   return { shapes, warnings: [] }
 }

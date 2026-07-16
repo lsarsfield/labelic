@@ -74,6 +74,21 @@ export function TextLinePanel({ layer }: { layer: TextLineLayer }) {
           />
         )}
       </div>
+      <div className="field-group">
+        <NumberField
+          label="Halo"
+          value={layer.haloMM}
+          min={0}
+          max={5}
+          step={0.1}
+          unit="mm"
+          onChange={(haloMM) => up({ haloMM })}
+        />
+        <p className="coming-soon">
+          Halo weaves a ground-colored moat around the text — it clears hatch and pattern layers
+          below.
+        </p>
+      </div>
     </>
   )
 }
