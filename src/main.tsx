@@ -9,6 +9,9 @@ import { loadProjectFile } from './io/project'
 import * as workspace from './io/workspace'
 import { presetBlank, TEMPLATES } from './model/presets'
 import { parseDoc } from './model/serialize'
+import { lastWeaveTimings } from './render/WeaveStage'
+import { gridChecksum } from './weave/grid'
+import { sampleDoc } from './weave/sample'
 
 // Dev-only console access for debugging and scripted verification.
 if (import.meta.env.DEV) {
@@ -25,6 +28,11 @@ if (import.meta.env.DEV) {
       workspace,
       presets: { presetBlank },
       templates: TEMPLATES,
+      debug: {
+        sampleDoc,
+        gridChecksum,
+        weaveTimings: () => ({ ...lastWeaveTimings }),
+      },
     },
   })
 }

@@ -10,6 +10,7 @@ import {
 import { redo, undo, useLabel } from '../state/store'
 import { useViewport } from '../state/viewport'
 import { SvgStage } from '../render/SvgStage'
+import { WeaveStage } from '../render/WeaveStage'
 import { ExportDialog } from './dialogs/ExportDialog'
 import { TemplatePicker } from './dialogs/TemplatePicker'
 import { Inspector } from './Inspector'
@@ -30,6 +31,7 @@ const STATUS_MESSAGES: Record<WorkspaceStatus['kind'], string | null> = {
 }
 
 export function AppShell() {
+  const woven = useLabel((s) => s.view.mode === 'woven')
   const [dialog, setDialog] = useState<Dialog>('none')
   const [statusNote, setStatusNote] = useState<string | null>(STATUS_MESSAGES[getStatus().kind])
   const [flash, setFlash] = useState<string | null>(null)
@@ -180,6 +182,7 @@ export function AppShell() {
           void loadFiles(e.dataTransfer.files)
         }}
       >
+        {woven && <WeaveStage />}
         <SvgStage />
         {dropDepth > 0 && <div className="drop-overlay">Drop to open</div>}
         {banner && (

@@ -25,6 +25,7 @@ export function SvgStage() {
   const heightMM = useLabel((s) => s.doc.heightMM)
   const warpHex = useLabel((s) => s.doc.weave.warp.hex)
   const artboardLight = useLabel((s) => s.view.artboardLight)
+  const woven = useLabel((s) => s.view.mode === 'woven')
   const select = useLabel((s) => s.select)
 
   // Track pane size; fit the label on first layout.
@@ -133,22 +134,28 @@ export function SvgStage() {
       onPointerLeave={() => useViewport.getState().setCursor(null)}
     >
       <g transform={`translate(${tx} ${ty}) scale(${scale})`}>
-        {/* Backdrop: the woven blank. Not part of the export subtree. */}
-        <g id="backdrop">
-          <rect
-            x={-widthMM / 2}
-            y={-heightMM / 2}
-            width={widthMM}
-            height={heightMM}
-            fill={artboardLight ? '#e9e7e2' : warpHex}
-            stroke="var(--face-edge)"
-            strokeWidth={1.5 / scale}
-            onPointerDown={(e) => {
-              if (e.button === 0 && !spaceDown) select(null)
-            }}
-          />
-        </g>
-        <g id="doc">
+        {/* Backdrop: the woven blank. Not part of the export subtree.
+            Hidden in woven mode — the WeaveStage canvas below paints the cloth. */}
+        {!woven && (
+          <g id="backdrop">
+            <rect
+              x={-widthMM / 2}
+              y={-heightMM / 2}
+              width={widthMM}
+              height={heightMM}
+              fill={artboardLight ? '#e9e7e2' : warpHex}
+              stroke="var(--face-edge)"
+              strokeWidth={1.5 / scale}
+              onPointerDown={(e) => {
+                if (e.button === 0 && !spaceDown) select(null)
+              }}
+            />
+          </g>
+        )}
+        {/* In woven mode the vector artwork fades out but stays mounted:
+            hit rects keep selection working over the canvas, and the font/
+            asset load kicks keep running. */}
+        <g id="doc" opacity={woven ? 0 : 1}>
           <DocRenderer />
         </g>
         <g id="overlays">
