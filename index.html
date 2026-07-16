@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Labelic — vintage woven garment label designer</title>
+    <meta
+      name="description"
+      content="Free browser tool for designing vintage woven garment labels — shuttle-loom and needle-loom, thread-true weave preview, arched brand text, borders and motifs — exported as mm-true artwork SVG and woven PNG mockups."
+    />
+    <meta name="theme-color" content="#17181c" />
+
+    <!-- Icons -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Labelic" />
+    <meta property="og:title" content="Labelic — vintage woven garment label designer" />
+    <meta
+      property="og:description"
+      content="Design vintage woven garment labels in the browser: shuttle-loom and needle-loom simulation, thread palettes, arched text, borders and motifs."
+    />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Labelic — vintage woven garment label designer" />
+    <meta
+      name="twitter:description"
+      content="Design vintage woven garment labels in the browser: shuttle-loom and needle-loom simulation, thread palettes, arched text, borders and motifs."
+    />
+
+    <!-- Structured data -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "Labelic",
+        "description": "Free, browser-based designer for vintage woven garment labels — shuttle-loom and needle-loom simulation, per-thread weave preview, arched brand text, borders and motifs — exported as mm-true artwork SVG and woven PNG mockups.",
+        "applicationCategory": "DesignApplication",
+        "operatingSystem": "Web browser (Chromium recommended for local fonts)",
+        "browserRequirements": "Requires JavaScript",
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+        "author": { "@type": "Person", "name": "Liam Sarsfield" },
+        "featureList": [
+          "Shuttle-loom and needle-loom weave simulation",
+          "Taffeta, satin and damask grounds with thread palettes",
+          "Straight and arched brand text with real font outlines",
+          "Border patterns, motifs and repeat rows",
+          "Fold types with guides (end, loop, centre, mitre)",
+          "mm-true artwork SVG export and woven PNG mockups"
+        ]
+      }
+    </script>
+
+    <style>
+      html,
+      body {
+        margin: 0;
+        background: #17181c;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <noscript>
+      <div
+        style="max-width: 720px; margin: 8vh auto; padding: 0 24px; font-family: system-ui, -apple-system, sans-serif; color: #dfe2e6; line-height: 1.55;"
+      >
+        <h1 style="font-weight: 600;">Labelic</h1>
+        <p>
+          Labelic is a free, browser-based designer for vintage woven garment labels — the fabric
+          brand tags sewn into clothing. It simulates both shuttle looms (the vintage kind: coarse
+          thread grids, selvedge edges, up to three weft colors) and modern needle looms (fine
+          grids, cut edges, up to eight wefts), over taffeta, satin and damask grounds.
+        </p>
+        <p>
+          Design with straight or arched brand text set in real font outlines, border patterns,
+          motifs and repeat rows, each woven in one thread from the label's palette. Export mm-true
+          artwork SVG a label mill can weave from (files re-open as editable projects) and woven
+          PNG mockups.
+        </p>
+        <p>
+          <strong>Labelic needs JavaScript.</strong> Open it in a modern browser to use it.
+        </p>
+      </div>
+    </noscript>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
