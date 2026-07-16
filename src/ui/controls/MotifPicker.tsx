@@ -9,6 +9,7 @@ export interface MotifPickerProps {
 
 /** Display order for the motif groups; unknown groups sort to the end. */
 const GROUP_ORDER = [
+  'Label',
   'Basic',
   'Celestial',
   'Floral',
