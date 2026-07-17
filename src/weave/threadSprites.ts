@@ -16,6 +16,55 @@ function lightDy(lightDeg: number): number {
 const quantize = (n: number, step: number) => Math.round(n / step) * step
 
 const tileCache = new Map<string, HTMLCanvasElement>()
+const textureCache = new Map<string, HTMLCanvasElement>()
+
+export interface WeaveTextureParams {
+  cellWpx: number
+  cellHpx: number
+  lightDeg: number
+}
+
+/**
+ * A one-cell RGBA overlay tiled across the WHOLE label (ground and figure
+ * alike) so every surface reads as interlaced thread, not flat colour. It
+ * encodes the weave structure: vertical warp ribbing (dark valleys at the
+ * column gaps, a lit crown offset toward the light) plus a pick-gap shadow
+ * at each row boundary. Drawn over the weft floats, this is what makes woven
+ * letters show the warp crossing them — the single biggest "it's cloth" tell.
+ */
+export function weaveTextureTile(p: WeaveTextureParams): HTMLCanvasElement {
+  const key = [quantize(p.cellWpx, 0.5), quantize(p.cellHpx, 0.5), quantize(lightDy(p.lightDeg), 0.25), quantize(Math.sin(p.lightDeg * DEG2RAD), 0.25)].join('|')
+  const hit = textureCache.get(key)
+  if (hit) return hit
+
+  const cw = Math.max(2, Math.round(p.cellWpx))
+  const ch = Math.max(2, Math.round(p.cellHpx))
+  const canvas = makeCanvas(cw, ch)
+  const ctx = canvas.getContext('2d')!
+
+  // vertical warp rib: dark at the column edges (the inter-warp valley when
+  // tiled), a lit crown shifted toward the horizontal light direction
+  const lx = Math.sin(p.lightDeg * DEG2RAD)
+  const crown = Math.max(0.3, Math.min(0.7, 0.5 + lx * 0.28))
+  const g = ctx.createLinearGradient(0, 0, cw, 0)
+  g.addColorStop(0, 'rgba(0,0,0,0.17)')
+  g.addColorStop(Math.max(0.12, crown - 0.18), 'rgba(255,255,255,0.055)')
+  g.addColorStop(crown, 'rgba(255,255,255,0.11)')
+  g.addColorStop(Math.min(0.88, crown + 0.18), 'rgba(255,255,255,0.055)')
+  g.addColorStop(1, 'rgba(0,0,0,0.17)')
+  ctx.fillStyle = g
+  ctx.fillRect(0, 0, cw, ch)
+
+  // pick gap: a thin shadow at the row boundary + a faint crown highlight
+  const gap = Math.max(1, Math.round(ch * 0.12))
+  ctx.fillStyle = 'rgba(0,0,0,0.13)'
+  ctx.fillRect(0, ch - gap, cw, gap)
+  ctx.fillStyle = 'rgba(255,255,255,0.045)'
+  ctx.fillRect(0, 0, cw, Math.max(1, Math.round(ch * 0.1)))
+
+  textureCache.set(key, canvas)
+  return canvas
+}
 
 function makeCanvas(w: number, h: number): HTMLCanvasElement {
   const c = document.createElement('canvas')
@@ -130,4 +179,5 @@ export function groundTile(p: GroundTileParams): HTMLCanvasElement {
 
 export function _resetSpriteCachesForTests(): void {
   tileCache.clear()
+  textureCache.clear()
 }

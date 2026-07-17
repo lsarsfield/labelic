@@ -5,7 +5,7 @@ import { visiblePanelMM } from '../geometry/folds'
 import { rgbToCss, shade, shadeCss } from './color'
 import type { WeaveGrid } from './grid'
 import { hash2 } from './grid'
-import { groundTile } from './threadSprites'
+import { groundTile, weaveTextureTile } from './threadSprites'
 
 /**
  * The thread painter. Weft floats are drawn as RUNS: a horizontal stretch of
@@ -99,15 +99,17 @@ export function paintWeave(
       let end = c + 1
       while (end < cols && data[rowBase + end] === v) end++
 
+      // per-thread wobble, but restrained — the weave texture (step 3) carries
+      // most of the "it's cloth" read now, so floats stay taut and crisp
       const wob = profile.jitter * ((hash2(c, r, v) % 1000) / 1000 - 0.5)
-      const capH = cellH * (0.9 + wob * 0.18)
-      const cy = cellH / 2 + wob * cellH * 0.14
-      const x0 = left + c * cellW - cellW * 0.08
-      const x1 = left + end * cellW + cellW * 0.08
+      const capH = cellH * (0.94 + wob * 0.1)
+      const cy = cellH / 2 + wob * cellH * 0.08
+      const x0 = left + c * cellW - cellW * 0.06
+      const x1 = left + end * cellW + cellW * 0.06
 
       if (useFuzz) {
-        ctx.shadowColor = shadeCss(doc.weave.wefts[v - 1]!.hex, 0.05, Math.min(0.5, profile.fuzz * 0.5))
-        ctx.shadowBlur = profile.fuzz * cellH * 0.4
+        ctx.shadowColor = shadeCss(doc.weave.wefts[v - 1]!.hex, 0.05, Math.min(0.4, profile.fuzz * 0.4))
+        ctx.shadowBlur = profile.fuzz * cellH * 0.28
       }
       ctx.fillStyle = gradients[v - 1]!
       capsule(ctx, x0, x1, cy, capH)
@@ -117,21 +119,8 @@ export function paintWeave(
       // specular stripe along the run
       if (profile.sheen > 0.2) {
         const sy = cy + (litFromTop ? -capH * 0.18 : capH * 0.18)
-        ctx.fillStyle = `rgba(255,255,255,${0.28 * profile.sheen})`
+        ctx.fillStyle = `rgba(255,255,255,${0.26 * profile.sheen})`
         ctx.fillRect(x0 + capH * 0.4, sy - capH * 0.08, x1 - x0 - capH * 0.8, capH * 0.16)
-      }
-
-      // warp dimples: the ends this float rides over
-      if (end - c > 1 && cellW > 2.5) {
-        ctx.strokeStyle = 'rgba(0, 0, 0, 0.13)'
-        ctx.lineWidth = Math.max(0.5, cellW * 0.07)
-        ctx.beginPath()
-        for (let k = c + 1; k < end; k++) {
-          const x = left + k * cellW
-          ctx.moveTo(x, cy - capH * 0.42)
-          ctx.lineTo(x, cy + capH * 0.42)
-        }
-        ctx.stroke()
       }
 
       c = end
@@ -139,16 +128,21 @@ export function paintWeave(
     ctx.restore()
   }
 
-  // 3 — pick seams: adjacent picks are separate threads; keep the rows honest
-  ctx.strokeStyle = 'rgba(0, 0, 0, 0.06)'
-  ctx.lineWidth = Math.max(0.5, cellH * 0.05)
-  ctx.beginPath()
-  for (let r = 1; r < rows; r++) {
-    const y = top + r * cellH
-    ctx.moveTo(left, y)
-    ctx.lineTo(left + labelW, y)
+  // 3 — weave-structure overlay: the unifying texture. Tiled over the WHOLE
+  // field (ground AND floats) so woven letters show the warp ribbing and pick
+  // rows crossing them — the strongest cloth cue. Only when cells are big
+  // enough to see; at fine needle density the surface reads smooth anyway.
+  if (cellW >= 1.6 && cellH >= 1.6) {
+    const tex = weaveTextureTile({ cellWpx: cellW, cellHpx: cellH, lightDeg: opts.lightDeg })
+    ctx.save()
+    ctx.translate(left, top)
+    const texPat = ctx.createPattern(tex, 'repeat')
+    if (texPat) {
+      ctx.fillStyle = texPat
+      ctx.fillRect(0, 0, labelW, labelH)
+    }
+    ctx.restore()
   }
-  ctx.stroke()
 
   // 4 — directional sheen wash from the light
   const rad = opts.lightDeg * DEG2RAD
